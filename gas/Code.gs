@@ -238,7 +238,7 @@ function setup() {
     r.sh.getRange('A:A').setNumberFormat('@');
     r.sh.getRange('E:E').setNumberFormat('@'); // 107,108 이 숫자로 바뀌지 않게
     r.sh.getRange(2, 3, 30, 1).setDataValidation(
-      SpreadsheetApp.newDataValidation().requireValueInList(['교과', '학급'], true).build());
+      SpreadsheetApp.newDataValidation().requireValueInList(['교과', '학급', '동아리'], true).build());
     r.sh.getRange(2, 6, 30, 1).insertCheckboxes();
     // 예시 한 줄. 설정 도우미에서 내 수업으로 바꾼다.
     r.sh.getRange(2, 1, 1, 6).setValues([['수업1', '수업 이름', '교과', '1학년', '', false]]);
@@ -480,7 +480,7 @@ function wizLoad(key) {
     accent: c.accent, tint: c.tint, refsLabel: c.refsLabel,
     hasPassword: !!PropertiesService.getScriptProperties().getProperty('T_HASH'),
     courses: rows_(SHEET.COURSES, COURSE_HEADERS.length).filter(function (r) { return String(r[0]).trim(); }).map(function (r) {
-      return { id: String(r[0]).trim(), name: String(r[1] || '').trim(), kind: String(r[2] || '').trim() === '학급' ? '학급' : '교과',
+      return { id: String(r[0]).trim(), name: String(r[1] || '').trim(), kind: ['학급', '동아리'].indexOf(String(r[2] || '').trim()) >= 0 ? String(r[2]).trim() : '교과',
         desc: String(r[3] || '').trim(), classes: autoPrefixes_(r[4]).map(prefixToText_).join(', '), active: r[5] === true };
     }),
     students: students.length,
@@ -539,7 +539,7 @@ function wizSave(key, d) {
     seen[id] = true;
     const row = rows[ids.indexOf(id)];
     row[1] = name;
-    row[2] = c.kind === '학급' ? '학급' : '교과';
+    row[2] = c.kind === '학급' || c.kind === '동아리' ? c.kind : '교과';
     row[3] = String(c.desc || '').trim().slice(0, 40);
     row[4] = textToPrefixes_(c.classes).join(',');
     row[5] = c.active !== false;
@@ -816,7 +816,7 @@ function activeCourses_() {
     return {
       id: String(r[0]).trim(),
       name: String(r[1] || r[0]).trim(),
-      kind: String(r[2] || '').trim() === '학급' ? 'class' : 'course',
+      kind: ({ '학급': 'class', '동아리': 'club' })[String(r[2] || '').trim()] || 'course',
       desc: String(r[3] || '').trim(),
       auto: r[4]
     };
@@ -2934,6 +2934,7 @@ function syncLog_(text) {
 /** 5분마다 도는 트리거. 실패해도 웹앱은 그대로 (바꾸기 전에 멈춘다). */
 function autoSyncTick() {
   try { selfCheck_(); } catch (e) { syncLog_('진단 실패: ' + e.message); }
+  try { onceTasks_(); } catch (e) { syncLog_('정리 실패: ' + e.message); try { diagRow_('동아리 추가 실패', e.message); } catch (x) {} }
   try {
     const r = syncNow_(false);
     if (r.changed) syncLog_('적용 완료: ' + r.version + (r.note ? ' — ' + r.note : '') + ' (웹앱 버전 ' + r.deployVersion + ')');
@@ -3007,4 +3008,42 @@ function selfCheck_() {
     try { const b = DriveApp.getFileById(id).getThumbnail(); diagRow_('드라이브 미리보기 ' + r[S.NAME], b ? '성공' : '없음(null)'); }
     catch (e) { diagRow_('드라이브 미리보기 ' + r[S.NAME], '실패: ' + e.message); }
   });
+}
+
+
+/* ───────────── 한 번만 하는 정리 (자동 업데이트 때 실행) ───────────── */
+const ONCE_ID = 'clubs-2026-10';
+function onceTasks_() {
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty('ONCE_DONE') === ONCE_ID) return;
+  props.setProperty('ONCE_DONE', ONCE_ID);
+  // 동아리: 셰이프(창체), 매터(자율). 이미 있으면 건드리지 않는다.
+  const clubs = [['셰이프', '셰이프', '동아리', '창체동아리', '', true], ['매터', '매터', '동아리', '자율동아리', '', true]];
+  const members = { '매터': ['30305', '30407', '30319', '30412', '30417'],
+    '셰이프': ['30305', '30407', '30319', '30412', '30417', '30308', '30415', '30312'] };
+  const csh = sheet_(SHEET.COURSES);
+  const have = rows_(SHEET.COURSES, COURSE_HEADERS.length).map(function (r) { return String(r[0]).trim(); });
+  try { csh.getRange(2, 3, Math.max(csh.getMaxRows() - 1, 1), 1).setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(['교과', '학급', '동아리'], true).build()); } catch (e) {}
+  clubs.forEach(function (c) {
+    if (have.indexOf(c[0]) >= 0) return;
+    csh.getRange(freeRow_(csh, 1), 1, 1, c.length).setValues([c]);
+  });
+  const ssh = sheet_(SHEET.STUDENTS);
+  const last = ssh.getLastRow();
+  if (last < 2) return;
+  const ids = ssh.getRange(2, C.ID + 1, last - 1, 1).getValues();
+  const cells = ssh.getRange(2, C.COURSES + 1, last - 1, 1);
+  const vals = cells.getValues();
+  let n = 0;
+  ids.forEach(function (r, i) {
+    const id = normId_(r[0]);
+    const add = Object.keys(members).filter(function (k) { return members[k].indexOf(id) >= 0; });
+    if (!add.length) return;
+    const list = String(vals[i][0] || '').split(/[,，\/\n]/).map(function (x) { return x.trim(); }).filter(Boolean);
+    add.forEach(function (k) { if (list.indexOf(k) < 0) { list.push(k); n++; } });
+    vals[i][0] = list.join(', ');
+  });
+  cells.setValues(vals);
+  try { CacheService.getScriptCache().removeAll(['cfg']); } catch (e) {}
+  diagRow_('동아리 추가', '셰이프·매터 수업 줄 확인, 학생 수업 칸에 ' + n + '건 추가');
 }

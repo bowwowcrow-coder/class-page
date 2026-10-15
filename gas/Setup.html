@@ -525,7 +525,7 @@
       var name = input('이름', c.name, '예: 디자인 일반', function (v) { c.name = v; head.firstChild.textContent = v || '새 수업'; drawRosterCourses(); });
       var kindLabel = el('label', 'fit', '종류');
       var kind = el('select');
-      ['교과', '학급'].forEach(function (k) { var o = el('option', '', k === '학급' ? '학급 (담임 반)' : '교과 수업'); o.value = k; kind.appendChild(o); });
+      ['교과', '학급', '동아리'].forEach(function (k) { var o = el('option', '', k === '학급' ? '학급 (담임 반)' : k === '동아리' ? '동아리' : '교과 수업'); o.value = k; kind.appendChild(o); });
       kind.value = c.kind || '교과';
       kind.addEventListener('change', function () { c.kind = kind.value; });
       kindLabel.appendChild(kind);

@@ -1,10 +1,10 @@
 {
-  "version": "20261015.1242",
-  "note": "출결: 인정 사유 선택, 하단을 서류 확인 체크로",
+  "version": "20261016.0747",
+  "note": "동아리(셰이프·매터) 추가",
   "files": [
     {
       "name": "Code.gs",
-      "sha256": "c94b89c7ad9e43183c59ae8a55d9dd2919ad66979a2b5cc54c330b30257327a0"
+      "sha256": "ea4f233522f7ebb85829470b06a40127dfef02593189a79573da741b221b9c87"
     },
     {
       "name": "Demo.gs",
@@ -12,11 +12,11 @@
     },
     {
       "name": "Index.html",
-      "sha256": "b38f5fcdd489ffa6ffab7b3127cae1222a372092eb76f8524f388a64d0c19283"
+      "sha256": "7fd9cff711e6bed806e996485402b0ff3ee76cde5abcca38fd15dc7cf7811c31"
     },
     {
       "name": "Setup.html",
-      "sha256": "3f3c7a625d808fc303ab8dda6c0903dd46750b92cb8ecc61d51c133bed2bd852"
+      "sha256": "580d8f7bee4d6e48348d2ae365ef59f300b76d0023156c988435f897d43c37db"
     }
   ]
 }

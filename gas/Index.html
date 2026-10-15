@@ -705,7 +705,8 @@
   }
   var TAB_NAMES = {
     course: { notices: '공지', refs: REFS, tasks: '과제', surveys: '설문' },
-    'class': { notices: '공지', refs: '자료', tasks: '제출', surveys: '설문' }
+    'class': { notices: '공지', refs: '자료', tasks: '제출', surveys: '설문' },
+    club: { notices: '공지', refs: '자료', tasks: '과제', surveys: '설문' }
   };
   var LEVEL_TEXT = { n: '미제출', '0': '정시', '1': '지각 1~3일', '2': '지각 4~7일', '3': '지각 8일 이상', x: '마감 후 허용' };
 
@@ -989,6 +990,9 @@
     lessons.forEach(function (c) { add(c.id, c.name); });
     if (rooms.length) nav.appendChild(el('span', 'nav-label', '학급'));
     rooms.forEach(function (c) { add(c.id, c.name); });
+    var clubs = courses.filter(function (c) { return c.kind === 'club'; });
+    if (clubs.length) nav.appendChild(el('span', 'nav-label', '동아리'));
+    clubs.forEach(function (c) { add(c.id, c.name); });
   }
   function markNav(nav, id) {
     nav.querySelectorAll('button').forEach(function (b) {
