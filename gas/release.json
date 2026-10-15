@@ -1,10 +1,10 @@
 {
-  "version": "20261015.0953",
-  "note": "자동 업데이트 오류 창에 구글 원문 함께 표시",
+  "version": "20261015.0958",
+  "note": "출결: 나이스 한눈에 보기 화면 추가",
   "files": [
     {
       "name": "Code.gs",
-      "sha256": "6e32a3667d9b3f50d0c14690c56276cba74d08741cda7a6abe8a60e804995fb8"
+      "sha256": "169b3f977db7d96edcd73f757a3c17726882ee85f16da6bd9e9a4c3d1542034a"
     },
     {
       "name": "Demo.gs",
@@ -12,7 +12,7 @@
     },
     {
       "name": "Index.html",
-      "sha256": "dd3e428ff63826b79f65727d064aca6fb62aecc86b7b97a341069d8c43b0cb2c"
+      "sha256": "b6f77ffa8fa76cede163927c9e7ffed04a86b52eefd8004224ee283e5772d4de"
     },
     {
       "name": "Setup.html",

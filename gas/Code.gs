@@ -2246,10 +2246,30 @@ function apiTeacherAttendNeis(token, courseId, date, sid, done) {
   if (!isTeacher_(token)) return expired_();
   courseId = String(courseId); date = attDate_(date); sid = normId_(sid);
   const t = attRows_(courseId);
-  const m = t.mine.filter(function (x) { return x.date === date && x.sid === sid; })[0];
-  if (!m) return fail_('출석으로 바뀐 학생입니다. 새로고침해 주세요.');
-  t.sh.getRange(m.i + 2, AT.NEIS + 1).setValue(done === true);
+  // sid가 '*'이면 그날 전부
+  const ms = t.mine.filter(function (x) { return x.date === date && (sid === '*' || x.sid === sid); });
+  if (!ms.length) return fail_('출석으로 바뀐 학생입니다. 새로고침해 주세요.');
+  ms.forEach(function (m) { t.sh.getRange(m.i + 2, AT.NEIS + 1).setValue(done === true); });
   return apiTeacherAttendDay(token, courseId, date);
+}
+
+/** 나이스 입력용: 한 달치 기록을 날짜·번호순 한 줄씩 */
+function apiTeacherAttendNeisList(token, courseId, month) {
+  if (!isTeacher_(token)) return expired_();
+  courseId = String(courseId); month = String(month || '');
+  if (!/^\d{4}-\d{2}$/.test(month)) return fail_('달을 다시 골라 주세요.');
+  const ac = attCourse_(courseId);
+  if (!ac) return fail_('출결은 학급(담임 반)에서만 쓸 수 있습니다.');
+  const who = {};
+  ac.roster.forEach(function (s) { who[s.id] = s; });
+  const items = attRows_(courseId).mine.filter(function (m) { return m.date.slice(0, 7) === month && who[m.sid]; })
+    .map(function (m) {
+      const v = attView_(m.r), s = who[m.sid];
+      v.date = m.date; v.day = dayOf_(m.date); v.id = s.id; v.num = s.num; v.name = s.name;
+      return v;
+    })
+    .sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0; });
+  return { ok: true, month: month, items: items };
 }
 
 /** 월 통계: 학생별 유형×구분 건수 (결과·조퇴·지각도 '건'으로 센다) */
