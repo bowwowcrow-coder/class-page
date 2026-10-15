@@ -2935,7 +2935,7 @@ function diagRow_(what, detail) {
   sh.appendRow([Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm:ss'), what, String(detail).slice(0, 500)]);
 }
 /** 자동 업데이트 직후 한 번: 드라이브 파일을 실제로 읽어 보고 결과를 [진단] 시트에 적는다. */
-const SELFCHECK_ID = 'thumb-1';
+const SELFCHECK_ID = 'thumb-2';
 function selfCheck_() {
   const props = PropertiesService.getScriptProperties();
   if (props.getProperty('SELFCHECK_DONE') === SELFCHECK_ID) return;

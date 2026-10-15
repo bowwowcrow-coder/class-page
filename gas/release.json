@@ -1,10 +1,10 @@
 {
-  "version": "20261015.1035",
-  "note": "썸네일 오류 기록 + 1회 점검",
+  "version": "20261015.1050",
+  "note": "드라이브 API 켠 뒤 재점검",
   "files": [
     {
       "name": "Code.gs",
-      "sha256": "f5fdd9bd9163cc05a501af82268db5c03ab9e4a5d57de7345186eb01c8c970d3"
+      "sha256": "6dcee5a48e5de318f14f89b33c10979e08a62c89dccbdb0288979ef1690206be"
     },
     {
       "name": "Demo.gs",
