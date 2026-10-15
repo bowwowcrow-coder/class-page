@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<style>
+  :root { --bg: #f5f5f7; --surface: #fff; --ink: #1d1d1f; --sub: #6e6e73; --line: rgba(0,0,0,.1); --fill: rgba(118,118,128,.12); --accent: #0071e3; --danger: #d70015; --green: #248a3d; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 0 20px 96px; background: var(--bg); color: var(--ink); font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif; letter-spacing: -0.01em; word-break: keep-all; }
+  [hidden] { display: none !important; }
+  h2 { margin: 28px 2px 8px; font-size: 13px; font-weight: 600; color: var(--sub); }
+  h2 b { color: var(--ink); font-weight: 700; margin-right: 6px; }
+  .card { padding: 16px; border-radius: 14px; background: var(--surface); }
+  .card + .card { margin-top: 10px; }
+  label { display: block; margin-top: 12px; font-size: 13px; color: var(--sub); }
+  label:first-child { margin-top: 0; }
+  input[type=text], input[type=password], input[type=number], select, textarea {
+    display: block; width: 100%; margin-top: 5px; padding: 0 12px; height: 40px; border: 0; border-radius: 9px;
+    background: var(--fill); font: inherit; color: var(--ink);
+  }
+  textarea { height: 150px; padding: 10px 12px; resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; white-space: pre; }
+  input:focus, select:focus, textarea:focus { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
+  :disabled { opacity: .55; }
+  .row { display: flex; gap: 10px; align-items: flex-end; }
+  .row > * { flex: 1; min-width: 0; }
+  .row > .fit { flex: none; }
+  .hint { margin: 8px 2px 0; font-size: 13px; color: var(--sub); white-space: pre-line; }
+  .ok { color: var(--green); } .bad { color: var(--danger); }
+  .check { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 14px; color: var(--ink); cursor: pointer; }
+  .check input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+  button { font: inherit; cursor: pointer; }
+  .mini { height: 34px; padding: 0 14px; border: 0; border-radius: 17px; background: var(--fill); color: var(--ink); font-size: 14px; font-weight: 500; }
+  .mini.blue { background: var(--accent); color: #fff; font-weight: 600; }
+  .mini.text { background: none; color: var(--danger); padding: 0 6px; }
+  .wheels { display: flex; gap: 20px; justify-content: space-around; }
+  .wheel-col { display: grid; justify-items: center; gap: 8px; }
+  .wheel-col strong { font-size: 14px; }
+  .wheel-col .hint { margin: 0; font-variant-numeric: tabular-nums; }
+  .wheel { position: relative; width: 168px; height: 168px; border-radius: 50%; touch-action: none; cursor: crosshair; }
+  .wheel canvas { display: block; width: 168px; height: 168px; border-radius: 50%; }
+  .wheel i { position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.45), 0 1px 4px rgba(0,0,0,.4); pointer-events: none; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .presets button { display: inline-flex; align-items: center; gap: 6px; }
+  .presets button span { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); }
+  .previews { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .pv { padding: 14px; border-radius: 12px; background: var(--bg); color: var(--ink); font-size: 12px; box-shadow: inset 0 0 0 1px var(--line); }
+  .pv small { color: var(--sub); font-size: 11px; }
+  .pv h3 { margin: 0 0 8px; font-size: 17px; font-weight: 700; letter-spacing: -0.02em; }
+  .pv .pseg { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 2px; border-radius: 7px; background: var(--fill); margin-bottom: 8px; }
+  .pv .pseg span { padding: 3px 0; border-radius: 5px; text-align: center; }
+  .pv .pseg span:first-child { background: var(--seg); font-weight: 600; }
+  .pv .pcard { padding: 10px; border-radius: 10px; background: var(--surface); }
+  .pv .pcard b { display: block; font-size: 13px; }
+  .pv .pcard a { color: var(--accent-ink, var(--accent)); }
+  .pv .pbtn { margin-top: 8px; padding: 6px 0; border-radius: 8px; background: var(--accent); color: #fff; text-align: center; font-weight: 600; }
+  .pv .dots { display: flex; gap: 5px; margin-top: 8px; }
+  .pv .dots i { width: 9px; height: 9px; border-radius: 50%; }
+  .todo { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 4px; border: 0; background: none; text-align: left; font-size: 14px; color: var(--ink); border-bottom: 1px solid var(--line); }
+  .todo:last-child { border-bottom: 0; }
+  .todo i { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 13px; font-weight: 700; background: var(--fill); color: var(--sub); }
+  .todo.done i { background: var(--green); color: #fff; }
+  .todo.now { font-weight: 600; }
+  .todo.now i { background: var(--accent); color: #fff; }
+  .todo span { flex: 1; }
+  .todo em { font-style: normal; font-size: 12px; color: var(--accent); }
+  details.help { margin-top: 12px; }
+  details.help summary { cursor: pointer; font-size: 13px; color: var(--accent); }
+  details.help p, details.help ul, .figs { margin: 8px 0 0; font-size: 13.5px; }
+  details.help ul, .figs { padding-left: 20px; }
+  details.help li, .figs li { margin: 8px 0; }
+  code { padding: 1px 6px; border-radius: 5px; background: var(--fill); font-size: 13px; }
+  .figs svg { display: block; width: 100%; max-width: 520px; margin: 8px 0 4px; }
+  .figs .hint { display: block; margin: 4px 0 0; }
+  .f-bar { fill: rgba(118,118,128,.14); } .f-pop { fill: #fff; stroke: rgba(0,0,0,.18); }
+  .f-hot { fill: #0071e3; } .f-t { font-size: 12px; fill: #6e6e73; } .f-tb { font-size: 13px; font-weight: 700; fill: #1d1d1f; } .f-th { font-size: 12px; font-weight: 700; fill: #fff; }
+  .qr-row { display: flex; gap: 16px; align-items: center; }
+  .qr-row canvas { flex: none; width: 116px; height: 116px; border-radius: 8px; background: #fff; }
+  .qr-side { flex: 1; min-width: 0; display: grid; gap: 8px; }
+  .qr-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+  .big { position: fixed; inset: 0; z-index: 20; display: grid; justify-items: center; align-content: center; gap: 10px; padding: 20px; background: #fff; color: #1d1d1f; text-align: center; overflow: auto; }
+  .big h1 { margin: 0; font-size: 30px; letter-spacing: -0.03em; }
+  .big canvas { width: min(46vh, 80vw); height: min(46vh, 80vw); }
+  .big p { margin: 0; font-size: 13px; color: #6e6e73; word-break: break-all; }
+  .big ol { margin: 4px 0 0; padding-left: 22px; text-align: left; font-size: 16px; }
+  .big ol li { margin: 3px 0; }
+  .steps { display: grid; gap: 10px; margin-top: 12px; }
+  .step { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 14px; }
+  .step strong { flex: none; width: 96px; font-weight: 600; white-space: nowrap; }
+  .step span { flex: 1; min-width: 200px; color: var(--sub); }
+  details.card { margin-top: 10px; }
+  details summary { cursor: pointer; font-size: 14px; color: var(--accent); }
+  .course-head { display: flex; align-items: center; justify-content: space-between; }
+  .course-head strong { font-size: 14px; }
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 12px; padding: 12px 20px; background: rgba(245,245,247,.92); backdrop-filter: blur(16px); border-top: 1px solid var(--line); }
+  .bar .msg { flex: 1; font-size: 13px; color: var(--sub); white-space: pre-line; }
+  .bar button { height: 42px; padding: 0 22px; border: 0; border-radius: 11px; background: var(--accent); color: #fff; font-size: 15px; font-weight: 600; }
+  .url { display: block; margin-top: 6px; padding: 10px 12px; border-radius: 9px; background: var(--fill); font-size: 13px; word-break: break-all; user-select: all; }
+  ol { margin: 6px 0 0; padding-left: 20px; font-size: 14px; }
+  ol li { margin: 4px 0; }
+</style>
+</head>
+<body>
+
+<p class="hint" id="loading" style="margin-top:24px">불러오는 중</p>
+
+<div id="form" hidden>
+  <h2 style="margin-top:20px">진행 상황</h2>
+  <div class="card" id="progress"></div>
+  <h2 id="sec1"><b>1</b>기본 정보</h2>
+  <div class="card">
+    <label>앱 이름 <input type="text" id="title" maxlength="30" placeholder="예: 수업 페이지"></label>
+    <label>학교 이름 (선택, 로그인 화면 제목 위에 작게 보입니다) <input type="text" id="school" maxlength="40" placeholder="예: OO고등학교"></label>
+    <label>탭 이름 (선택) <input type="text" id="tab" maxlength="20" placeholder="비우면 앱 이름"></label>
+    <p class="hint">학생이 폰 홈 화면에 추가하면 탭 이름의 첫 글자가 아이콘에 들어갑니다.</p>
+    <label>수업의 세 번째 탭 이름
+      <input type="text" id="refsLabel" maxlength="8" list="refsNames" placeholder="자료">
+      <datalist id="refsNames"><option value="자료"><option value="레퍼런스"><option value="링크"><option value="읽을거리"><option value="참고"></datalist>
+    </label>
+    <p class="hint">수업마다 공지, 과제 옆에 붙는 탭입니다. 링크나 참고할 것을 모아 둡니다.
+아무것도 넣지 않은 수업에서는 학생에게 이 탭이 보이지 않습니다.</p>
+  </div>
+
+  <h2 id="sec2"><b>2</b>화면 색</h2>
+  <div class="card">
+    <div class="wheels">
+      <div class="wheel-col">
+        <strong>포인트 색</strong>
+        <div class="wheel" id="wAccent"><canvas></canvas><i></i></div>
+        <span class="hint" id="accentInfo"></span>
+        <button class="mini" type="button" id="accentReset">기본 파랑으로</button>
+      </div>
+      <div class="wheel-col">
+        <strong>배경 색감</strong>
+        <div class="wheel" id="wTint"><canvas></canvas><i></i></div>
+        <span class="hint" id="tintInfo"></span>
+        <button class="mini" type="button" id="tintReset">기본 회색으로</button>
+      </div>
+    </div>
+    <p class="hint">원판에서 한 점을 누르거나 끌어서 고릅니다. 가운데로 갈수록 무채색, 바깥으로 갈수록 선명해집니다.
+어떤 색을 골라도 글자가 읽히도록 밝기는 자동으로 맞춥니다.</p>
+    <div class="presets" id="presets"></div>
+    <div class="previews">
+      <div class="pv" id="pvLight"></div>
+      <div class="pv" id="pvDark"></div>
+    </div>
+  </div>
+
+  <h2 id="sec3"><b>3</b>교사 비밀번호</h2>
+  <div class="card">
+    <label><span id="pwState"></span> <input type="password" id="password" maxlength="40" placeholder="6자 이상" autocomplete="new-password"></label>
+    <p class="hint">교사 화면에 들어갈 때 씁니다. 비워 두면 지금 비밀번호가 유지됩니다.</p>
+  </div>
+
+  <h2 id="sec4"><b>4</b>학번 구조</h2>
+  <div class="card">
+    <div class="row">
+      <label>학년 자릿수 <select id="sg"><option>1</option><option>2</option></select></label>
+      <label>반 자릿수 <select id="sc"><option>1</option><option>2</option></select></label>
+      <label>번호 자릿수 <select id="sn"><option>2</option><option>3</option></select></label>
+    </div>
+    <p class="hint" id="shapeHint"></p>
+    <details class="help"><summary>우리 학교는 어떤 구조인지 모르겠어요</summary>
+      <p>학생들이 쓰는 학번을 하나 떠올려 보세요.</p>
+      <ul>
+        <li><b>10712</b>처럼 5자리 (1학년 07반 12번) → 학년 1, 반 2, 번호 2</li>
+        <li><b>1712</b>처럼 4자리 (1학년 7반 12번) → 학년 1, 반 1, 번호 2</li>
+        <li>한 반이 100명을 넘는 경우만 번호를 3으로 합니다.</li>
+      </ul>
+      <p>학생을 한 명이라도 넣은 뒤에는 바꿀 수 없으니 여기서 먼저 정해 주세요.</p>
+    </details>
+  </div>
+
+  <h2 id="sec5"><b>5</b>처음 접속할 때 본인 확인</h2>
+  <div class="card">
+    <label>확인 방법
+      <select id="codePreset">
+        <option value="휴대폰 번호 뒤 4자리|숫자 4자리">휴대폰 번호 뒤 4자리</option>
+        <option value="생년월일 6자리|예: 090315">생년월일 6자리</option>
+        <option value="선생님이 알려준 코드|받은 코드 입력">선생님이 나눠 준 코드</option>
+        <option value="">직접 정하기</option>
+      </select>
+    </label>
+    <div class="row" id="codeCustom" hidden>
+      <label>칸 이름 <input type="text" id="codeLabel" maxlength="30"></label>
+      <label>칸 안내 <input type="text" id="codeHint" maxlength="30"></label>
+    </div>
+    <p class="hint">학생이 처음 PIN을 만들 때 한 번만 입력합니다. 값은 아래 명단의 "확인코드"에 넣습니다.</p>
+    <details class="help"><summary>왜 필요한가요? 무엇을 고르면 좋나요?</summary>
+      <p>학번과 이름은 친구들도 알기 때문에, 본인만 아는 값을 하나 더 물어 남이 대신 PIN을 만들지 못하게 합니다.</p>
+      <ul>
+        <li><b>휴대폰 번호 뒤 4자리</b>: 명단에 전화번호를 붙여넣으면 뒤 4자리만 저장됩니다. 가장 간편합니다.</li>
+        <li><b>생년월일 6자리</b>: 전화번호가 없는 학생이 있을 때 씁니다.</li>
+        <li><b>선생님이 나눠 준 코드</b>: 가장 안전하지만 학생마다 코드를 정해 나눠 줘야 합니다.</li>
+      </ul>
+      <p>한 번 PIN을 만든 뒤에는 다시 묻지 않습니다.</p>
+    </details>
+  </div>
+
+  <h2 id="sec6"><b>6</b>수업과 학급</h2>
+  <div id="courses"></div>
+  <p style="margin:10px 0 0"><button class="mini" type="button" id="addCourse">+ 수업 추가</button></p>
+  <p class="hint">"반 전체 배정"에 1-7, 1-8 처럼 학년-반을 적으면 그 반 학생 전원이 자동으로 들어갑니다.
+선택 과목처럼 일부만 듣는 수업은 비워 두고, 아래 명단에서 수업을 골라 붙여넣습니다.
+담임 반은 종류를 "학급"으로 하면 공지·제출 공간이 따로 생깁니다.</p>
+  <details class="help card"><summary>내 경우에는 어떻게 넣나요? (유형별 예시)</summary>
+    <ul>
+      <li><b>여러 반에 같은 과목을 가르친다</b><br>수업 1개. 반 전체 배정에 <code>1-7, 1-8</code>처럼 맡은 반을 모두 적습니다.</li>
+      <li><b>선택과목이라 신청한 학생만 듣는다</b><br>수업 1개. 반 전체 배정은 비워 둡니다. 명단 양식의 "수업" 칸에 이 수업 이름을 적은 학생만 들어옵니다.</li>
+      <li><b>담임만 맡는다</b><br>수업 1개, 종류를 "학급"으로. 반 전체 배정에 내 반(예: <code>3-2</code>)을 적습니다.</li>
+      <li><b>교과도 가르치고 담임도 맡는다</b><br>위의 것을 각각 하나씩 추가합니다. 학생은 자기에게 해당하는 것만 보게 됩니다.</li>
+      <li><b>과목이 여러 개다</b><br>과목마다 "+ 수업 추가"를 누릅니다.</li>
+    </ul>
+    <p>과제는 여기서 만들지 않습니다. 설정이 끝난 뒤 웹앱의 교사 화면에서 "+ 새 과제"로 만듭니다.</p>
+  </details>
+
+  <h2 id="sec7"><b>7</b>학생 명단</h2>
+  <div class="card">
+    <p class="hint" id="rosterState" style="margin-top:0"></p>
+    <div class="steps">
+      <div class="step">
+        <strong>① 양식 받기</strong>
+        <button class="mini" type="button" id="tplDown">엑셀 양식 내려받기</button>
+      </div>
+      <div class="step">
+        <strong>② 채우기</strong>
+        <span>엑셀에서 열어 학년, 반, 번호, 이름, 확인코드를 적고 저장합니다.</span>
+      </div>
+      <div class="step">
+        <strong>③ 올리기</strong>
+        <button class="mini blue" type="button" id="filePick">채운 파일 올리기</button>
+        <input type="file" id="rosterFile" accept=".xlsx,.csv" hidden>
+      </div>
+    </div>
+    <p class="hint" id="fileMsg">이미 있는 학생은 이름과 확인코드만 고치고 PIN은 그대로 둡니다. 같은 파일을 고쳐서 다시 올려도 됩니다.</p>
+  </div>
+  <details class="card" id="pasteBox">
+    <summary>파일 없이 직접 붙여넣기</summary>
+    <label>명단 형식
+      <select id="mode">
+        <option value="id">학번이 들어 있는 명단 (학번, 이름, 확인코드)</option>
+        <option value="class">번호와 이름만 있는 명단 (반을 골라서 넣기)</option>
+      </select>
+    </label>
+    <div class="row" id="classPick" hidden>
+      <label>학년 <input type="number" id="grade" min="1" max="6" value="1"></label>
+      <label>반 <input type="number" id="cls" min="1" max="99" value="1"></label>
+    </div>
+    <label>이 학생들을 넣을 수업 (선택)
+      <select id="rosterCourse"></select>
+    </label>
+    <label>엑셀이나 시트에서 복사해 붙여넣기
+      <textarea id="roster" spellcheck="false" placeholder="10701	홍길동	5678&#10;10702	김철수	1234"></textarea>
+    </label>
+    <p style="margin:10px 0 0"><button class="mini blue" type="button" id="import">명단 넣기</button></p>
+    <p class="hint" id="rosterMsg">확인코드 칸은 비워 둬도 되고, 전화번호 전체를 붙여넣으면 뒤 4자리만 저장합니다.</p>
+  </details>
+
+  <h2 id="sec8"><b>8</b>웹앱 주소 만들고 학생에게 열어 주기</h2>
+  <div class="card" id="qrCard" hidden>
+    <div class="qr-row">
+      <canvas id="qr" width="232" height="232"></canvas>
+      <div class="qr-side">
+        <strong>학생에게 보여 줄 QR</strong>
+        <span class="url" id="url"></span>
+        <div class="qr-btns">
+          <button class="mini blue" type="button" id="qrBig">교실 화면용으로 크게</button>
+          <button class="mini" type="button" id="qrSave">QR 이미지 저장</button>
+          <button class="mini" type="button" id="urlCopy">주소 복사</button>
+        </div>
+      </div>
+    </div>
+    <p class="hint">폰은 QR로, 노트북은 주소 링크로 들어옵니다. 한 번 들어온 뒤 홈 화면에 추가하거나 북마크해 두게 하면 다음부터는 바로 열 수 있습니다.</p>
+  </div>
+  <details class="card" id="deployHelp">
+    <summary>웹앱 주소 만드는 방법 (처음 한 번)</summary>
+    <ol class="figs">
+      <li>이 스프레드시트 위쪽 메뉴에서 <b>확장 프로그램 &gt; Apps Script</b>를 엽니다.
+        <svg viewBox="0 0 520 96" role="img" aria-label="스프레드시트 메뉴에서 확장 프로그램을 누르고 Apps Script를 고르는 그림">
+          <rect x="0" y="0" width="520" height="30" rx="6" class="f-bar"/>
+          <text x="14" y="20" class="f-t">파일　수정　보기　삽입　서식　데이터　도구</text>
+          <rect x="296" y="4" width="92" height="22" rx="5" class="f-hot"/><text x="342" y="20" class="f-th" text-anchor="middle">확장 프로그램</text>
+          <text x="400" y="20" class="f-t">도움말　수업 관리</text>
+          <rect x="296" y="34" width="150" height="58" rx="6" class="f-pop"/>
+          <text x="310" y="54" class="f-t">부가기능</text>
+          <rect x="302" y="62" width="138" height="24" rx="5" class="f-hot"/><text x="312" y="79" class="f-th">Apps Script</text>
+        </svg>
+      </li>
+      <li>새로 열린 편집기의 오른쪽 위에서 <b>배포 &gt; 새 배포</b>를 누릅니다.
+        <svg viewBox="0 0 520 96" role="img" aria-label="편집기 오른쪽 위의 배포 버튼을 누르고 새 배포를 고르는 그림">
+          <rect x="0" y="0" width="520" height="30" rx="6" class="f-bar"/>
+          <text x="14" y="20" class="f-t">Apps Script　　수업 페이지</text>
+          <rect x="424" y="4" width="84" height="22" rx="5" class="f-hot"/><text x="466" y="20" class="f-th" text-anchor="middle">배포 ▾</text>
+          <rect x="378" y="34" width="130" height="58" rx="6" class="f-pop"/>
+          <rect x="384" y="40" width="118" height="22" rx="5" class="f-hot"/><text x="394" y="56" class="f-th">새 배포</text>
+          <text x="394" y="80" class="f-t">배포 관리</text>
+        </svg>
+      </li>
+      <li>왼쪽 톱니바퀴에서 <b>웹 앱</b>을 고르고, 액세스 권한을 <b>모든 사용자</b>로 바꾼 뒤 <b>배포</b>를 누릅니다.
+        <svg viewBox="0 0 520 132" role="img" aria-label="새 배포 창에서 유형을 웹 앱으로, 액세스 권한을 모든 사용자로 고르는 그림">
+          <rect x="0" y="0" width="520" height="132" rx="8" class="f-pop"/>
+          <text x="16" y="24" class="f-tb">새 배포</text>
+          <text x="16" y="52" class="f-t">유형 선택 ⚙</text>
+          <rect x="16" y="60" width="96" height="24" rx="5" class="f-hot"/><text x="64" y="77" class="f-th" text-anchor="middle">웹 앱</text>
+          <text x="150" y="52" class="f-t">다음 사용자 인증 정보로 실행</text>
+          <rect x="150" y="58" width="200" height="22" rx="5" class="f-bar"/><text x="160" y="74" class="f-t">나</text>
+          <text x="150" y="98" class="f-t">액세스 권한이 있는 사용자</text>
+          <rect x="150" y="104" width="200" height="22" rx="5" class="f-hot"/><text x="160" y="120" class="f-th">모든 사용자</text>
+          <rect x="430" y="100" width="74" height="26" rx="6" class="f-hot"/><text x="467" y="118" class="f-th" text-anchor="middle">배포</text>
+        </svg>
+        <span class="hint">"액세스 승인"을 묻는 창이 뜨면: 내 계정 선택 &gt; 고급 &gt; "(안전하지 않음)으로 이동" &gt; 허용.</span>
+      </li>
+      <li>나온 <b>웹 앱 URL</b>을 한 번 눌러 엽니다. 로그인 화면이 뜨면 성공입니다.
+        <svg viewBox="0 0 520 64" role="img" aria-label="배포가 끝나면 나오는 웹 앱 URL 그림">
+          <rect x="0" y="0" width="520" height="64" rx="8" class="f-pop"/>
+          <text x="16" y="24" class="f-tb">웹 앱</text>
+          <rect x="16" y="32" width="410" height="24" rx="5" class="f-hot"/><text x="26" y="49" class="f-th">https://script.google.com/macros/s/AKfy…/exec</text>
+          <text x="440" y="49" class="f-t">복사</text>
+        </svg>
+      </li>
+      <li>이 창으로 돌아와 아래 <b>새로 확인</b>을 누르면 QR이 나타납니다. 안 나오면 주소를 복사해 붙여넣으세요.</li>
+    </ol>
+    <div class="row" style="margin-top:10px">
+      <label>웹 앱 주소 붙여넣기 (자동으로 안 잡힐 때) <input type="text" id="urlInput" placeholder="https://script.google.com/macros/s/.../exec"></label>
+      <button class="mini fit" type="button" id="urlSet">넣기</button>
+      <button class="mini blue fit" type="button" id="urlCheck">새로 확인</button>
+    </div>
+    <p class="hint" id="urlMsg">화면에 보이는 글자는 구글이 바꾸면 조금 다를 수 있습니다. 나중에 코드를 고쳤을 때는 "새 배포"가 아니라 배포 관리 &gt; 연필 &gt; 새 버전으로 올려야 주소가 그대로 유지됩니다.</p>
+  </details>
+  <details class="card help" id="firstClass">
+    <summary>첫 수업에서 학생들과 할 일</summary>
+    <ol id="firstSteps"></ol>
+  </details>
+</div>
+
+<div class="big" id="big" hidden>
+  <h1 id="bigTitle"></h1>
+  <canvas id="bigQr" width="720" height="720"></canvas>
+  <p id="bigUrl"></p>
+  <ol id="bigSteps"></ol>
+  <button class="mini" type="button" id="bigClose">닫기</button>
+</div>
+
+<div class="bar" id="bar" hidden>
+  <span class="msg" id="msg">1~6번은 저장을 눌러야 반영됩니다.</span>
+  <button type="button" id="save">저장</button>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var state = null;       // 서버에서 받은 현재 설정
+  var courses = [];       // 화면에서 편집 중인 수업 목록
+
+  var KEY = '<?= key ?>'; // 이 창을 열 때 받은 일회용 열쇠
+  function run(fn, arg) {
+    return new Promise(function (resolve, reject) {
+      var runner = google.script.run.withSuccessHandler(resolve).withFailureHandler(reject);
+      if (arg === undefined) runner[fn](KEY); else runner[fn](KEY, arg);
+    });
+  }
+  function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+  function say(text, kind) { $('msg').textContent = text; $('msg').className = 'msg' + (kind ? ' ' + kind : ''); }
+  function clean(err) { return String(err && err.message || err).replace(/^(Exception|Error|ScriptError):\s*/, ''); }
+
+  /* ── 화면 색: 원판에서 고른 색으로 색 변수 묶음을 계산한다 ── */
+  var accent = '', tint = '';   // 원판에서 고른 색(#rrggbb). 비어 있으면 기본값
+  var BASE = {
+    light: { bg: '#f5f5f7', surface: '#ffffff', ink: '#1d1d1f', sub: '#6e6e73', line: 'rgba(0,0,0,.08)', fill: 'rgba(118,118,128,.12)', seg: '#ffffff', bar: 'rgba(245,245,247,.82)', accent: '#0071e3', 'accent-down': '#0062c4' },
+    dark: { bg: '#000000', surface: '#1c1c1e', ink: '#f5f5f7', sub: '#98989d', line: 'rgba(255,255,255,.12)', fill: 'rgba(118,118,128,.24)', seg: '#636366', bar: 'rgba(0,0,0,.72)', accent: '#0a84ff', 'accent-down': '#409cff' }
+  };
+  function hsvToRgb(h, s, v) {
+    var c = v * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = v - c, r = 0, g = 0, b = 0;
+    if (h < 60) { r = c; g = x; } else if (h < 120) { r = x; g = c; } else if (h < 180) { g = c; b = x; } else if (h < 240) { g = x; b = c; } else if (h < 300) { r = x; b = c; } else { r = c; b = x; }
+    return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
+  }
+  function toHex(rgb) { return '#' + rgb.map(function (n) { return (n < 16 ? '0' : '') + n.toString(16); }).join(''); }
+  function hexToHs(hex) { // 원판 위의 위치: 색상(0~360), 선명도(0~1)
+    var r = parseInt(hex.substr(1, 2), 16) / 255, g = parseInt(hex.substr(3, 2), 16) / 255, b = parseInt(hex.substr(5, 2), 16) / 255;
+    var max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min, h = 0;
+    if (d) { h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4; h = (h * 60 + 360) % 360; }
+    return { h: h, s: max ? d / max : 0 };
+  }
+  function hslToRgb(h, s, l) { // s, l: 0~100
+    s /= 100; l /= 100;
+    var c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = l - c / 2, r = 0, g = 0, b = 0;
+    if (h < 60) { r = c; g = x; } else if (h < 120) { r = x; g = c; } else if (h < 180) { g = c; b = x; } else if (h < 240) { g = x; b = c; } else if (h < 300) { r = x; b = c; } else { r = c; b = x; }
+    return [(r + m) * 255, (g + m) * 255, (b + m) * 255];
+  }
+  function luminance(rgb) { var a = rgb.map(function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2]; }
+  function contrast(a, b) { var x = luminance(a), y = luminance(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }
+  function hsl(h, s, l, alpha) { var body = Math.round(h) + ', ' + Math.round(s) + '%, ' + Math.round(l * 10) / 10 + '%'; return alpha == null ? 'hsl(' + body + ')' : 'hsla(' + body + ', ' + alpha + ')'; }
+  /* 흰 글자가 읽히는 밝기를 찾는다: 시작 밝기에서 조금씩 어둡게 */
+  function readableL(h, s, start, need) { var l = start; while (l > 18 && contrast([255, 255, 255], hslToRgb(h, s, l)) < need) l -= 1; return l; }
+  function themeVars() {
+    var light = {}, dark = {};
+    var bgL = [245, 245, 247], cardD = [28, 28, 30]; // 링크 글자가 놓이는 바탕: 밝은 화면의 배경, 어두운 화면의 카드
+    if (tint) {
+      var t = hexToHs(tint), s = t.s, h = t.h;
+      light.bg = hsl(h, s * 46, 96 - s * 2); light.ink = hsl(h, s * 30, 12); light.sub = hsl(h, s * 14, 38);
+      light.fill = hsl(h, s * 35, 45, 0.12); light.line = hsl(h, s * 30, 20, 0.1); light.bar = hsl(h, s * 46, 96 - s * 2, 0.82);
+      dark.bg = hsl(h, s * 38, s * 7); dark.surface = hsl(h, s * 26, 11 + s * 3); dark.ink = hsl(h, s * 25, 96); dark.sub = hsl(h, s * 12, 63);
+      dark.fill = hsl(h, s * 25, 55, 0.24); dark.line = hsl(h, s * 20, 90, 0.12); dark.seg = hsl(h, s * 14, 40); dark.bar = hsl(h, s * 38, s * 7, 0.72);
+      bgL = hslToRgb(h, s * 46, 96 - s * 2); cardD = hslToRgb(h, s * 26, 11 + s * 3);
+    }
+    if (accent) {
+      var a = hexToHs(accent), sat = a.s * 88;
+      // 버튼 바탕: 흰 글자가 읽히는 밝기. 무채색에 가까우면 먹색 쪽으로 더 어둡게 시작한다
+      var l1 = readableL(a.h, sat, 52 - (1 - a.s) * 22, 4.6), l2 = readableL(a.h, sat, 60, 3.4);
+      light.accent = hsl(a.h, sat, l1); light['accent-down'] = hsl(a.h, sat, l1 - 6);
+      dark.accent = hsl(a.h, sat, l2); dark['accent-down'] = hsl(a.h, sat, Math.min(l2 + 8, 78));
+      // 링크 글자: 바탕 위에서 읽히도록 밝은 화면은 더 어둡게, 어두운 화면은 더 밝게
+      var i1 = l1, i2 = l2;
+      while (i1 > 10 && contrast(hslToRgb(a.h, sat, i1), bgL) < 4.5) i1 -= 1;
+      while (i2 < 90 && contrast(hslToRgb(a.h, sat, i2), cardD) < 4.5) i2 += 1;
+      light['accent-ink'] = hsl(a.h, sat, i1); dark['accent-ink'] = hsl(a.h, sat, i2);
+    }
+    return { light: light, dark: dark };
+  }
+  function themeCss() { // 웹앱에 그대로 끼워 넣을 색 변수 선언
+    var v = themeVars();
+    var block = function (o) { return Object.keys(o).map(function (k) { return '--' + k + ':' + o[k] + ';'; }).join(''); };
+    if (!Object.keys(v.light).length) return '';
+    return ':root{' + block(v.light) + '}@media (prefers-color-scheme: dark){:root{' + block(v.dark) + '}}';
+  }
+  function drawPreview() {
+    var v = themeVars();
+    [['pvLight', 'light', '밝은 화면'], ['pvDark', 'dark', '어두운 화면']].forEach(function (p) {
+      var box = $(p[0]), vars = {}, k;
+      for (k in BASE[p[1]]) vars[k] = BASE[p[1]][k];
+      for (k in v[p[1]]) vars[k] = v[p[1]][k];
+      for (k in vars) box.style.setProperty('--' + k, vars[k]);
+      if (!box.firstChild) {
+        box.innerHTML = '<small></small><h3>디자인 일반</h3><div class="pseg"><span>공지</span><span>과제</span></div>' +
+          '<div class="pcard"><b>캐릭터 디자인</b><small>10월 8일(목) 13:00</small> <a>모아보기</a><div class="pbtn">제출</div></div>' +
+          '<div class="dots"><i style="background:#34c759"></i><i style="background:#ffcc00"></i><i style="background:#ff9500"></i><i style="background:#ff3b30"></i><i style="background:#af52de"></i></div>';
+      }
+      box.firstChild.textContent = p[2];
+    });
+    $('accentInfo').textContent = accent ? '고른 색 적용 중' : '기본 파랑';
+    $('tintInfo').textContent = tint ? '고른 색감 적용 중' : '기본 회색';
+  }
+  /* 색 원판: 각도는 색상, 중심에서의 거리는 선명도 */
+  function wheel(id, get, set) {
+    var box = $(id), canvas = box.querySelector('canvas'), mark = box.querySelector('i');
+    var size = 168, dpr = Math.min(window.devicePixelRatio || 1, 2), px = Math.round(size * dpr), R = px / 2;
+    canvas.width = px; canvas.height = px;
+    var ctx = canvas.getContext('2d'), img = ctx.createImageData(px, px);
+    for (var y = 0; y < px; y++) for (var x = 0; x < px; x++) {
+      var dx = x + 0.5 - R, dy = y + 0.5 - R, r = Math.sqrt(dx * dx + dy * dy) / R, i = (y * px + x) * 4;
+      if (r > 1) continue;
+      var rgb = hsvToRgb((Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360, r, 1);
+      img.data[i] = rgb[0]; img.data[i + 1] = rgb[1]; img.data[i + 2] = rgb[2]; img.data[i + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+    function place() {
+      var v = get();
+      mark.hidden = !v;
+      if (!v) return;
+      var p = hexToHs(v), rad = p.h * Math.PI / 180;
+      mark.style.left = (size / 2 + Math.cos(rad) * p.s * size / 2) + 'px';
+      mark.style.top = (size / 2 + Math.sin(rad) * p.s * size / 2) + 'px';
+      mark.style.background = v;
+    }
+    function pick(e) {
+      var rect = box.getBoundingClientRect(), dx = e.clientX - rect.left - size / 2, dy = e.clientY - rect.top - size / 2;
+      var r = Math.min(1, Math.sqrt(dx * dx + dy * dy) / (size / 2));
+      set(toHex(hsvToRgb((Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360, r, 1)));
+      place(); drawPreview();
+    }
+    box.addEventListener('pointerdown', function (e) { box.setPointerCapture(e.pointerId); pick(e); });
+    box.addEventListener('pointermove', function (e) { if (e.buttons || e.pointerType === 'touch') pick(e); });
+    return place;
+  }
+  var placeAccent = wheel('wAccent', function () { return accent; }, function (v) { accent = v; });
+  var placeTint = wheel('wTint', function () { return tint; }, function (v) { tint = v; });
+  function setColors(a, t) { accent = a; tint = t; placeAccent(); placeTint(); drawPreview(); }
+  $('accentReset').addEventListener('click', function () { setColors('', tint); });
+  $('tintReset').addEventListener('click', function () { setColors(accent, ''); });
+  // 한 번에 고르는 조합: [이름, 포인트(색상, 선명도), 배경(색상, 선명도)]
+  [['기본', null, null], ['종이', [28, 0.8], [40, 0.6]], ['블루그레이', [215, 0.85], [215, 0.55]], ['세이지', [150, 0.75], [130, 0.5]],
+    ['로즈', [345, 0.75], [350, 0.45]], ['라벤더', [265, 0.7], [260, 0.5]], ['먹색', [0, 0], null]].forEach(function (p) {
+    var b = el('button', 'mini');
+    b.type = 'button';
+    var a = p[1] ? toHex(hsvToRgb(p[1][0], p[1][1], 1)) : '', t = p[2] ? toHex(hsvToRgb(p[2][0], p[2][1], 1)) : '';
+    var dot = el('span'); dot.style.background = p[1] ? (p[1][1] ? a : '#444') : '#0071e3';
+    b.appendChild(dot); b.appendChild(document.createTextNode(p[0]));
+    b.addEventListener('click', function () { setColors(a, t); });
+    $('presets').appendChild(b);
+  });
+
+  /* ── 학번 구조 ── */
+  function pad(n, w) { var s = String(n); while (s.length < w) s = '0' + s; return s; }
+  function shape() { return [Number($('sg').value), Number($('sc').value), Number($('sn').value)]; }
+  function drawShape() {
+    var s = shape();
+    $('shapeHint').textContent = '예: 1학년 7반 12번 → ' + pad(1, s[0]) + pad(7, s[1]) + pad(12, s[2]) + ' (' + (s[0] + s[1] + s[2]) + '자리)' +
+      (state && state.students ? '\n학생이 이미 등록되어 있어 바꿀 수 없습니다.' : '');
+  }
+  ['sg', 'sc', 'sn'].forEach(function (id) { $(id).addEventListener('change', drawShape); });
+
+  /* ── 본인 확인 ── */
+  function drawCode() { $('codeCustom').hidden = $('codePreset').value !== ''; }
+  $('codePreset').addEventListener('change', function () {
+    var v = $('codePreset').value;
+    if (v) { var p = v.split('|'); $('codeLabel').value = p[0]; $('codeHint').value = p[1]; }
+    drawCode();
+  });
+
+  /* ── 수업 ── */
+  function drawCourses() {
+    var box = $('courses');
+    box.textContent = '';
+    courses.forEach(function (c, i) {
+      var card = el('div', 'card');
+      var head = el('div', 'course-head');
+      head.appendChild(el('strong', '', c.name || '새 수업'));
+      var del = el('button', 'mini text', c.id ? '목록에서 빼기' : '삭제');
+      del.type = 'button';
+      del.addEventListener('click', function () { courses.splice(i, 1); drawCourses(); drawRosterCourses(); });
+      head.appendChild(del);
+      card.appendChild(head);
+
+      var row1 = el('div', 'row');
+      var name = input('이름', c.name, '예: 디자인 일반', function (v) { c.name = v; head.firstChild.textContent = v || '새 수업'; drawRosterCourses(); });
+      var kindLabel = el('label', 'fit', '종류');
+      var kind = el('select');
+      ['교과', '학급'].forEach(function (k) { var o = el('option', '', k === '학급' ? '학급 (담임 반)' : '교과 수업'); o.value = k; kind.appendChild(o); });
+      kind.value = c.kind || '교과';
+      kind.addEventListener('change', function () { c.kind = kind.value; });
+      kindLabel.appendChild(kind);
+      row1.appendChild(name); row1.appendChild(kindLabel);
+      card.appendChild(row1);
+      card.appendChild(input('설명 (선택, 수업 제목 위에 작게 보입니다)', c.desc, '예: 시각디자인과 1학년', function (v) { c.desc = v; }));
+      card.appendChild(input('반 전체 배정 (비우면 신청자만)', c.classes, '예: 1-7, 1-8', function (v) { c.classes = v; drawRosterCourses(); }));
+      box.appendChild(card);
+    });
+    if (!courses.length) box.appendChild(el('p', 'hint', '아직 수업이 없습니다. 아래 버튼으로 추가하세요.'));
+  }
+  function input(label, value, hint, onChange) {
+    var l = el('label', '', label);
+    var i = el('input'); i.type = 'text'; i.value = value || ''; i.placeholder = hint || ''; i.maxLength = 40;
+    i.addEventListener('input', function () { onChange(i.value); });
+    l.appendChild(i);
+    return l;
+  }
+  $('addCourse').addEventListener('click', function () { courses.push({ id: '', name: '', kind: '교과', desc: '', classes: '', active: true }); drawCourses(); drawRosterCourses(); });
+
+  /* ── 명단 ── */
+  function drawRosterCourses() {
+    var sel = $('rosterCourse'), keep = sel.value;
+    sel.textContent = '';
+    var none = el('option', '', '고르지 않음 (반 전체 배정으로 충분할 때)'); none.value = ''; sel.appendChild(none);
+    (state ? state.courses : []).forEach(function (c) { // 저장된 수업만 고를 수 있다
+      var o = el('option', '', c.name + (c.classes ? '' : ' (신청자만)')); o.value = c.id; sel.appendChild(o);
+    });
+    sel.value = keep;
+    if (sel.selectedIndex < 0) sel.value = '';
+  }
+  function drawRosterState() {
+    $('rosterState').textContent = '지금 ' + state.students + '명 등록됨' + (state.students ? ' (PIN을 만든 학생 ' + state.withPin + '명, 확인코드가 비어 있는 학생 ' + state.noCode + '명)' : '');
+  }
+  $('mode').addEventListener('change', function () {
+    $('classPick').hidden = $('mode').value !== 'class';
+    $('roster').placeholder = $('mode').value === 'class' ? '1\t홍길동\t5678\n2\t김철수\t1234' : '10701\t홍길동\t5678\n10702\t김철수\t1234';
+  });
+  $('import').addEventListener('click', function () {
+    var text = $('roster').value;
+    if (!text.trim()) { $('rosterMsg').textContent = '붙여넣은 내용이 없습니다.'; return; }
+    $('import').disabled = true;
+    $('rosterMsg').className = 'hint'; $('rosterMsg').textContent = '넣는 중';
+    run('wizImport', { mode: $('mode').value, grade: $('grade').value, cls: $('cls').value, course: $('rosterCourse').value, text: text }).then(function (r) {
+      $('rosterMsg').className = 'hint ' + (r.added + r.updated ? 'ok' : 'bad');
+      $('rosterMsg').textContent = '새로 넣은 학생 ' + r.added + '명, 고친 학생 ' + r.updated + '명' +
+        (r.skipped.length ? '\n읽지 못한 줄 ' + r.skipped.length + '개: ' + r.skipped.slice(0, 5).join(' / ') : '');
+      if (r.added + r.updated) $('roster').value = '';
+      return run('wizLoad');
+    }).then(function (s) { if (s) { state.students = s.students; state.withPin = s.withPin; state.noCode = s.noCode; drawRosterState(); drawShape(); lockShape(); drawProgress(); } })
+      .catch(function (err) { $('rosterMsg').className = 'hint bad'; $('rosterMsg').textContent = clean(err); })
+      .then(function () { $('import').disabled = false; });
+  });
+  function lockShape() { ['sg', 'sc', 'sn'].forEach(function (id) { $(id).disabled = state.students > 0; }); }
+
+  /* ── 엑셀 양식 만들기 (라이브러리 없이 xlsx 파일을 직접 조립한다) ── */
+  var XML_HEAD = '<' + '?xml version="1.0" encoding="UTF-8" standalone="yes"?' + '>';
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  var CRC = (function () { var t = []; for (var n = 0; n < 256; n++) { var c = n; for (var k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  function crc32(bytes) { var c = 0xFFFFFFFF; for (var i = 0; i < bytes.length; i++) c = CRC[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+  function zipStore(files) { // files: [[이름, 내용 문자열]] → 압축하지 않은 zip
+    var enc = new TextEncoder(), chunks = [], central = [], offset = 0;
+    files.forEach(function (f) {
+      var name = enc.encode(f[0]), data = enc.encode(f[1]), crc = crc32(data);
+      var head = new DataView(new ArrayBuffer(30));
+      head.setUint32(0, 0x04034b50, true); head.setUint16(4, 20, true); head.setUint16(6, 0x0800, true);
+      head.setUint32(14, crc, true); head.setUint32(18, data.length, true); head.setUint32(22, data.length, true); head.setUint16(26, name.length, true);
+      chunks.push(new Uint8Array(head.buffer), name, data);
+      var cd = new DataView(new ArrayBuffer(46));
+      cd.setUint32(0, 0x02014b50, true); cd.setUint16(4, 20, true); cd.setUint16(6, 20, true); cd.setUint16(8, 0x0800, true);
+      cd.setUint32(16, crc, true); cd.setUint32(20, data.length, true); cd.setUint32(24, data.length, true); cd.setUint16(28, name.length, true); cd.setUint32(42, offset, true);
+      central.push(new Uint8Array(cd.buffer), name);
+      offset += 30 + name.length + data.length;
+    });
+    var size = central.reduce(function (n, c) { return n + c.length; }, 0);
+    var end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true); end.setUint32(12, size, true); end.setUint32(16, offset, true);
+    return new Blob(chunks.concat(central, [new Uint8Array(end.buffer)]), { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  }
+  function colName(i) { return String.fromCharCode(65 + i); }
+  function sheetXml(rows, widths, freeze) {
+    var body = rows.map(function (cells, r) {
+      return '<row r="' + (r + 1) + '">' + cells.map(function (c, i) {
+        var style = c && c.bold ? 2 : 1, text = c && c.text != null ? c.text : c;
+        return text === '' || text == null ? '' : '<c r="' + colName(i) + (r + 1) + '" t="inlineStr" s="' + style + '"><is><t xml:space="preserve">' + esc(text) + '</t></is></c>';
+      }).join('') + '</row>';
+    }).join('');
+    return XML_HEAD + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+      '<sheetViews><sheetView workbookViewId="0">' + (freeze ? '<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>' : '') + '</sheetView></sheetViews>' +
+      '<cols>' + widths.map(function (w, i) { return '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" style="1" customWidth="1"/>'; }).join('') + '</cols>' +
+      '<sheetData>' + body + '</sheetData></worksheet>';
+  }
+  var HEADERS = ['학년', '반', '번호', '이름', '확인코드', '수업'];
+  function makeTemplate() {
+    var elective = (state ? state.courses : []).filter(function (c) { return c.active && !c.classes; }).map(function (c) { return c.name; });
+    var s = shape();
+    var guide = [
+      [{ text: '작성법', bold: true }],
+      ['한 줄에 학생 한 명씩 [명단] 시트에 적습니다. 첫 줄(학년, 반, 번호...)은 지우지 마세요.'],
+      ['학년, 반, 번호: 숫자만 적습니다. 예) 1학년 7반 12번 → 1, 7, 12  (학번은 ' + pad(1, s[0]) + pad(7, s[1]) + pad(12, s[2]) + ' 로 자동으로 만들어집니다)'],
+      ['이름: 학생이 로그인할 때 입력하는 이름 그대로 적습니다.'],
+      ['확인코드: 학생이 처음 접속할 때 본인 확인으로 입력하는 값입니다. 지금 방식: ' + $('codeLabel').value + '. 전화번호 전체를 넣으면 뒤 4자리만 저장됩니다.'],
+      ['수업: 반 전체가 듣는 수업은 비워 둡니다. 신청한 학생만 듣는 수업일 때만 수업 이름을 적습니다. 여러 개면 쉼표로 구분합니다.'],
+      [elective.length ? '지금 적을 수 있는 수업 이름: ' + elective.join(', ') : '지금은 신청자만 듣는 수업이 없어서 수업 칸은 비워 두면 됩니다.'],
+      ['다 채웠으면 저장한 뒤, 설정 도우미에서 "채운 파일 올리기"로 이 파일을 고릅니다.'],
+      ['이미 등록된 학생은 이름과 확인코드만 바뀌고 PIN은 그대로입니다. 고쳐서 다시 올려도 됩니다.']
+    ];
+    var REL = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+    return zipStore([
+      ['[Content_Types].xml', XML_HEAD + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'],
+      ['_rels/.rels', XML_HEAD + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="' + REL + '/officeDocument" Target="xl/workbook.xml"/></Relationships>'],
+      ['xl/workbook.xml', XML_HEAD + '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="' + REL + '"><bookViews><workbookView/></bookViews><sheets><sheet name="명단" sheetId="1" r:id="rId1"/><sheet name="작성법" sheetId="2" r:id="rId2"/></sheets></workbook>'],
+      ['xl/_rels/workbook.xml.rels', XML_HEAD + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="' + REL + '/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="' + REL + '/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="' + REL + '/styles" Target="styles.xml"/></Relationships>'],
+      // 모든 칸을 '텍스트' 서식으로 둔다: 0094 같은 확인코드의 앞자리 0이 지워지지 않게
+      ['xl/styles.xml', XML_HEAD + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="맑은 고딕"/></font><font><b/><sz val="11"/><name val="맑은 고딕"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF0F0F3"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="49" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="49" fontId="1" fillId="2" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>'],
+      ['xl/worksheets/sheet1.xml', sheetXml([HEADERS.map(function (t) { return { text: t, bold: true }; })], [8, 8, 8, 16, 14, 22], true)],
+      ['xl/worksheets/sheet2.xml', sheetXml(guide, [110], false)]
+    ]);
+  }
+  $('tplDown').addEventListener('click', function () {
+    var a = el('a');
+    a.href = URL.createObjectURL(makeTemplate());
+    a.download = '학생명단_양식.xlsx';
+    document.body.appendChild(a); a.click(); a.remove();
+    $('fileMsg').className = 'hint'; $('fileMsg').textContent = '양식을 내려받았습니다. 엑셀에서 채운 뒤 저장하고 ③에서 올려 주세요.\n내려받기가 안 되면 아래 "직접 붙여넣기"를 쓰면 됩니다.';
+  });
+
+  /* ── 채운 파일 읽기 (xlsx 또는 csv) ── */
+  function inflate(bytes) {
+    if (typeof DecompressionStream === 'undefined') return Promise.reject(new Error('이 브라우저에서는 엑셀 파일을 읽을 수 없습니다. 크롬 최신 버전에서 열거나 "직접 붙여넣기"를 써 주세요.'));
+    return new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer().then(function (b) { return new Uint8Array(b); });
+  }
+  function unzip(buf, wanted) { // 필요한 파일만 꺼낸다 → { 이름: 문자열 }
+    var dv = new DataView(buf), end = -1;
+    for (var i = buf.byteLength - 22; i >= 0 && i > buf.byteLength - 70000; i--) if (dv.getUint32(i, true) === 0x06054b50) { end = i; break; }
+    if (end < 0) return Promise.reject(new Error('엑셀(xlsx) 파일이 아닌 것 같습니다.'));
+    var count = dv.getUint16(end + 10, true), p = dv.getUint32(end + 16, true), jobs = [], out = {}, dec = new TextDecoder();
+    for (var n = 0; n < count; n++) {
+      if (dv.getUint32(p, true) !== 0x02014b50) break;
+      var method = dv.getUint16(p + 10, true), csize = dv.getUint32(p + 20, true), nameLen = dv.getUint16(p + 28, true),
+        extra = dv.getUint16(p + 30, true), comment = dv.getUint16(p + 32, true), local = dv.getUint32(p + 42, true);
+      var name = dec.decode(new Uint8Array(buf, p + 46, nameLen));
+      if (wanted(name)) {
+        var start = local + 30 + dv.getUint16(local + 26, true) + dv.getUint16(local + 28, true);
+        var data = new Uint8Array(buf, start, csize);
+        (function (name, method, data) {
+          jobs.push((method === 8 ? inflate(data) : Promise.resolve(data)).then(function (bytes) { out[name] = dec.decode(bytes); }));
+        })(name, method, data);
+      }
+      p += 46 + nameLen + extra + comment;
+    }
+    return Promise.all(jobs).then(function () { return out; });
+  }
+  function readXlsx(buf) { // 첫 번째 시트를 문자열 표로
+    return unzip(buf, function (n) { return n === 'xl/sharedStrings.xml' || /^xl\/worksheets\/sheet\d+\.xml$/.test(n); }).then(function (files) {
+      var sheets = Object.keys(files).filter(function (n) { return n.indexOf('worksheets') > 0; }).sort(function (a, b) { return Number(a.match(/\d+/)[0]) - Number(b.match(/\d+/)[0]); });
+      if (!sheets.length) throw new Error('엑셀 파일에서 시트를 찾지 못했습니다.');
+      var parse = function (xml) { return new DOMParser().parseFromString(xml, 'application/xml'); };
+      var texts = function (node) { return [].map.call(node.getElementsByTagName('t'), function (t) { return t.parentNode.nodeName === 'rPh' ? '' : t.textContent; }).join(''); };
+      var shared = files['xl/sharedStrings.xml'] ? [].map.call(parse(files['xl/sharedStrings.xml']).getElementsByTagName('si'), texts) : [];
+      var table = [];
+      [].forEach.call(parse(files[sheets[0]]).getElementsByTagName('row'), function (row) {
+        var r = Number(row.getAttribute('r')) - 1, line = table[r] = table[r] || [];
+        [].forEach.call(row.getElementsByTagName('c'), function (c) {
+          var ref = (c.getAttribute('r') || '').replace(/\d+/g, ''), col = 0;
+          for (var k = 0; k < ref.length; k++) col = col * 26 + (ref.charCodeAt(k) - 64);
+          var type = c.getAttribute('t'), v = c.getElementsByTagName('v')[0];
+          line[col - 1] = type === 's' ? (shared[Number(v && v.textContent)] || '') : type === 'inlineStr' ? texts(c) : (v ? v.textContent : '');
+        });
+      });
+      return table;
+    });
+  }
+  function readCsv(buf) {
+    var text;
+    try { text = new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (e) { text = new TextDecoder('euc-kr').decode(buf); } // 엑셀에서 저장한 CSV는 한글 인코딩이 다르다
+    text = text.replace(/^\uFEFF/, '');
+    var sep = text.split('\n')[0].indexOf('\t') >= 0 ? '\t' : ',';
+    var table = [], row = [], cell = '', quoted = false;
+    for (var i = 0; i < text.length; i++) {
+      var ch = text[i];
+      if (quoted) { if (ch === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else quoted = false; } else cell += ch; }
+      else if (ch === '"') quoted = true;
+      else if (ch === sep) { row.push(cell); cell = ''; }
+      else if (ch === '\n') { row.push(cell); table.push(row); row = []; cell = ''; }
+      else if (ch !== '\r') cell += ch;
+    }
+    if (cell || row.length) { row.push(cell); table.push(row); }
+    return table;
+  }
+  /* 표에서 제목 줄을 찾아 칸의 뜻을 알아낸 뒤 학생 줄 목록으로 바꾼다 */
+  function tableToRows(table) {
+    var head = -1, map = {};
+    for (var r = 0; r < Math.min(table.length, 15) && head < 0; r++) {
+      if ((table[r] || []).some(function (c) { return /이름|성명/.test(String(c || '')); })) head = r;
+    }
+    if (head < 0) throw new Error('첫 줄의 제목(학년, 반, 번호, 이름...)을 찾지 못했습니다. 양식의 첫 줄을 지우지 않았는지 확인해 주세요.');
+    table[head].forEach(function (c, i) {
+      var t = String(c || '').replace(/\s/g, '');
+      if (!t) return;
+      if (/이름|성명/.test(t)) map.name = i;
+      else if (/확인|코드|전화|휴대|연락|생년|생일/.test(t)) map.code = i;
+      else if (/학번/.test(t)) map.id = i;
+      else if (/학년/.test(t)) map.grade = i;
+      else if (/수업|과목|강좌/.test(t)) map.course = i;
+      else if (/번호|^번$/.test(t)) map.num = i;
+      else if (/반|학급/.test(t)) map.cls = i;
+    });
+    if (map.id === undefined && (map.grade === undefined || map.cls === undefined || map.num === undefined)) {
+      throw new Error('학년, 반, 번호 칸(또는 학번 칸)을 찾지 못했습니다. 내려받은 양식의 첫 줄을 그대로 써 주세요.');
+    }
+    var rows = [];
+    for (var k = head + 1; k < table.length; k++) {
+      var line = table[k] || [], get = function (key) { return map[key] === undefined ? '' : String(line[map[key]] == null ? '' : line[map[key]]).trim(); };
+      var item = { line: k + 1, grade: get('grade'), cls: get('cls'), num: get('num'), id: get('id'), name: get('name'), code: get('code'), course: get('course') };
+      if (item.name || item.id || item.num) rows.push(item);
+    }
+    return rows;
+  }
+  $('filePick').addEventListener('click', function () { $('rosterFile').click(); });
+  $('rosterFile').addEventListener('change', function () {
+    var file = $('rosterFile').files[0];
+    if (!file) return;
+    var msg = $('fileMsg');
+    msg.className = 'hint'; msg.textContent = '파일을 읽는 중';
+    $('filePick').disabled = true;
+    file.arrayBuffer().then(function (buf) {
+      return /\.csv$/i.test(file.name) ? readCsv(buf) : readXlsx(buf);
+    }).then(function (table) {
+      var rows = tableToRows(table);
+      if (!rows.length) throw new Error('학생이 한 명도 적혀 있지 않습니다. [명단] 시트의 둘째 줄부터 채워 주세요.');
+      msg.textContent = rows.length + '명을 넣는 중';
+      return run('wizImportRows', rows);
+    }).then(function (r) {
+      msg.className = 'hint ' + (r.added + r.updated ? 'ok' : 'bad');
+      msg.textContent = '새로 넣은 학생 ' + r.added + '명, 고친 학생 ' + r.updated + '명' +
+        (r.skipped.length ? '\n넣지 못한 줄 ' + r.skipped.length + '개\n· ' + r.skipped.slice(0, 6).join('\n· ') : '') +
+        (r.unknownCourses && r.unknownCourses.length ? '\n설정에 없는 수업 이름이라 수업 지정은 건너뛰었습니다: ' + r.unknownCourses.join(', ') : '');
+      return run('wizLoad');
+    }).then(function (s) { state.students = s.students; state.withPin = s.withPin; state.noCode = s.noCode; drawRosterState(); drawShape(); lockShape(); drawProgress(); })
+      .catch(function (err) { msg.className = 'hint bad'; msg.textContent = clean(err); })
+      .then(function () { $('filePick').disabled = false; $('rosterFile').value = ''; });
+  });
+
+  /* ── QR 만들기 (라이브러리 없이. 바이트 모드, 오류 정정 M, 버전 1~12) ── */
+  function qrMatrix(text) {
+    var data = Array.prototype.slice.call(new TextEncoder().encode(text));
+    // 버전별: [블록당 오류 정정 수, [블록 수, 블록당 데이터 수], ...]
+    var TABLE = [null, [10, [1, 16]], [16, [1, 28]], [26, [1, 44]], [18, [2, 32]], [24, [2, 43]], [16, [4, 27]], [18, [4, 31]],
+      [22, [2, 38], [2, 39]], [22, [3, 36], [2, 37]], [26, [4, 43], [1, 44]], [30, [1, 50], [4, 51]], [22, [6, 36], [2, 37]]];
+    var ALIGN = [null, [], [6, 18], [6, 22], [6, 26], [6, 30], [6, 34], [6, 22, 38], [6, 24, 42], [6, 26, 46], [6, 28, 50], [6, 30, 54], [6, 32, 58]];
+    var ver = 0, cap = 0, i, j;
+    for (var v = 1; v <= 12 && !ver; v++) {
+      var dc = 0;
+      TABLE[v].slice(1).forEach(function (b) { dc += b[0] * b[1]; });
+      if (data.length * 8 <= dc * 8 - 4 - (v < 10 ? 8 : 16)) { ver = v; cap = dc; }
+    }
+    if (!ver) return null; // 너무 긴 글자
+    // 1) 데이터 비트열 → 코드워드
+    var bits = [];
+    function push(val, len) { for (var k = len - 1; k >= 0; k--) bits.push((val >> k) & 1); }
+    push(4, 4); push(data.length, ver < 10 ? 8 : 16);
+    data.forEach(function (b) { push(b, 8); });
+    for (i = 0; i < 4 && bits.length < cap * 8; i++) bits.push(0);
+    while (bits.length % 8) bits.push(0);
+    var cw = [];
+    for (i = 0; i < bits.length; i += 8) { var x = 0; for (j = 0; j < 8; j++) x = (x << 1) | bits[i + j]; cw.push(x); }
+    for (i = 0; cw.length < cap; i++) cw.push(i % 2 ? 0x11 : 0xEC);
+    // 2) 오류 정정 코드 (리드-솔로몬)
+    var EXP = [], LOG = [], g = 1;
+    for (i = 0; i < 255; i++) { EXP[i] = g; LOG[g] = i; g <<= 1; if (g & 256) g ^= 0x11D; }
+    for (i = 255; i < 512; i++) EXP[i] = EXP[i - 255];
+    function mul(a, b) { return a && b ? EXP[LOG[a] + LOG[b]] : 0; }
+    var ecLen = TABLE[ver][0], gen = [1];
+    for (i = 0; i < ecLen; i++) {
+      var next = []; for (j = 0; j <= gen.length; j++) next.push(0);
+      for (j = 0; j < gen.length; j++) { next[j] ^= gen[j]; next[j + 1] ^= mul(gen[j], EXP[i]); }
+      gen = next;
+    }
+    function rs(block) {
+      var rem = []; for (var k = 0; k < ecLen; k++) rem.push(0);
+      block.forEach(function (d) { var f = d ^ rem.shift(); rem.push(0); for (var k = 0; k < ecLen; k++) rem[k] ^= mul(gen[k + 1], f); });
+      return rem;
+    }
+    var blocks = [], pos = 0;
+    TABLE[ver].slice(1).forEach(function (grp) { for (var k = 0; k < grp[0]; k++) { blocks.push(cw.slice(pos, pos + grp[1])); pos += grp[1]; } });
+    var ecs = blocks.map(rs), out = [], longest = blocks[blocks.length - 1].length;
+    for (i = 0; i < longest; i++) blocks.forEach(function (b) { if (i < b.length) out.push(b[i]); });
+    for (i = 0; i < ecLen; i++) ecs.forEach(function (e) { out.push(e[i]); });
+    // 3) 판 만들기: 고정 무늬
+    var n = ver * 4 + 17, m = [], fn = [];
+    for (i = 0; i < n; i++) { m.push([]); fn.push([]); for (j = 0; j < n; j++) { m[i].push(0); fn[i].push(false); } }
+    function set(r, c, on) { m[r][c] = on ? 1 : 0; fn[r][c] = true; }
+    function finder(r, c) {
+      for (var dy = -1; dy <= 7; dy++) for (var dx = -1; dx <= 7; dx++) {
+        var y = r + dy, x2 = c + dx;
+        if (y < 0 || x2 < 0 || y >= n || x2 >= n) continue;
+        var inside = dy >= 0 && dy <= 6 && dx >= 0 && dx <= 6;
+        set(y, x2, inside && (dy === 0 || dy === 6 || dx === 0 || dx === 6 || (dy >= 2 && dy <= 4 && dx >= 2 && dx <= 4)));
+      }
+    }
+    finder(0, 0); finder(0, n - 7); finder(n - 7, 0);
+    for (i = 8; i < n - 8; i++) { set(6, i, i % 2 === 0); set(i, 6, i % 2 === 0); }
+    var al = ALIGN[ver], lastAl = al[al.length - 1];
+    al.forEach(function (r) { al.forEach(function (c) {
+      if ((r === 6 && c === 6) || (r === 6 && c === lastAl) || (r === lastAl && c === 6)) return; // 큰 네모와 겹치는 자리
+      for (var dy = -2; dy <= 2; dy++) for (var dx = -2; dx <= 2; dx++) set(r + dy, c + dx, Math.max(Math.abs(dy), Math.abs(dx)) !== 1);
+    }); });
+    for (i = 0; i < 9; i++) { if (!fn[8][i]) set(8, i, 0); if (!fn[i][8]) set(i, 8, 0); }             // 형식 정보 자리 잡아 두기
+    for (i = 0; i < 8; i++) { if (!fn[8][n - 1 - i]) set(8, n - 1 - i, 0); if (!fn[n - 1 - i][8]) set(n - 1 - i, 8, 0); }
+    set(n - 8, 8, 1);
+    if (ver >= 7) { // 버전 정보
+      var rem = ver << 12;
+      for (i = 17; i >= 12; i--) if ((rem >> i) & 1) rem ^= 0x1F25 << (i - 12);
+      var vb = (ver << 12) | rem;
+      for (i = 0; i < 18; i++) { var a = n - 11 + i % 3, b2 = Math.floor(i / 3), bit = (vb >> i) & 1; set(b2, a, bit); set(a, b2, bit); }
+    }
+    // 4) 데이터 채우기: 오른쪽 아래에서 지그재그
+    var idx = 0, up = true;
+    for (var col = n - 1; col > 0; col -= 2) {
+      if (col === 6) col--;
+      for (var k2 = 0; k2 < n; k2++) {
+        var row = up ? n - 1 - k2 : k2;
+        for (j = 0; j < 2; j++) {
+          var c2 = col - j;
+          if (fn[row][c2]) continue;
+          m[row][c2] = idx < out.length * 8 ? (out[idx >> 3] >> (7 - (idx & 7))) & 1 : 0;
+          idx++;
+        }
+      }
+      up = !up;
+    }
+    // 5) 마스크 8가지 중 가장 읽기 좋은 것 고르기
+    var MASKS = [function (r, c) { return (r + c) % 2 === 0; }, function (r) { return r % 2 === 0; }, function (r, c) { return c % 3 === 0; },
+      function (r, c) { return (r + c) % 3 === 0; }, function (r, c) { return (Math.floor(r / 2) + Math.floor(c / 3)) % 2 === 0; },
+      function (r, c) { return (r * c) % 2 + (r * c) % 3 === 0; }, function (r, c) { return ((r * c) % 2 + (r * c) % 3) % 2 === 0; },
+      function (r, c) { return ((r + c) % 2 + (r * c) % 3) % 2 === 0; }];
+    function build(mask) {
+      var q = m.map(function (line) { return line.slice(); }), r, c, k;
+      for (r = 0; r < n; r++) for (c = 0; c < n; c++) if (!fn[r][c] && MASKS[mask](r, c)) q[r][c] ^= 1;
+      var rem = mask << 10; // 오류 정정 M의 형식 비트는 00
+      for (k = 14; k >= 10; k--) if ((rem >> k) & 1) rem ^= 0x537 << (k - 10);
+      var f = ((mask << 10) | rem) ^ 0x5412, bit = function (k) { return (f >> k) & 1; };
+      for (k = 0; k <= 5; k++) q[k][8] = bit(k);
+      q[7][8] = bit(6); q[8][8] = bit(7); q[8][7] = bit(8);
+      for (k = 9; k < 15; k++) q[8][14 - k] = bit(k);
+      for (k = 0; k < 8; k++) q[8][n - 1 - k] = bit(k);
+      for (k = 8; k < 15; k++) q[n - 15 + k][8] = bit(k);
+      q[n - 8][8] = 1;
+      return q;
+    }
+    function penalty(q) {
+      var score = 0, r, c, dark = 0;
+      for (var pass = 0; pass < 2; pass++) for (r = 0; r < n; r++) { // 가로, 세로
+        var run = 1, line = '';
+        for (c = 0; c < n; c++) {
+          var cur = pass ? q[c][r] : q[r][c];
+          line += cur;
+          if (c) { var prev = pass ? q[c - 1][r] : q[r][c - 1]; if (cur === prev) { run++; if (run === 5) score += 3; else if (run > 5) score++; } else run = 1; }
+        }
+        var at = -1; while ((at = line.indexOf('10111010000', at + 1)) >= 0) score += 40;
+        at = -1; while ((at = line.indexOf('00001011101', at + 1)) >= 0) score += 40;
+      }
+      for (r = 0; r < n - 1; r++) for (c = 0; c < n - 1; c++) if (q[r][c] === q[r][c + 1] && q[r][c] === q[r + 1][c] && q[r][c] === q[r + 1][c + 1]) score += 3;
+      for (r = 0; r < n; r++) for (c = 0; c < n; c++) dark += q[r][c];
+      return score + Math.floor(Math.abs(dark * 20 - n * n * 10) / (n * n)) * 10;
+    }
+    var best = null, bestScore = Infinity, bestMask = 0;
+    for (i = 0; i < 8; i++) { var cand = build(i), sc = penalty(cand); if (sc < bestScore) { best = cand; bestScore = sc; bestMask = i; } }
+    return { size: n, modules: best, version: ver, mask: bestMask };
+  }
+
+  function paintQr(canvas, text) {
+    var q = qrMatrix(text), ctx = canvas.getContext('2d'), size = canvas.width;
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
+    if (!q) return false;
+    var cell = Math.floor(size / (q.size + 8)), off = Math.floor((size - cell * q.size) / 2); // 둘레에 여백 4칸 이상
+    ctx.fillStyle = '#000';
+    for (var r = 0; r < q.size; r++) for (var c = 0; c < q.size; c++) if (q.modules[r][c]) ctx.fillRect(off + c * cell, off + r * cell, cell, cell);
+    return true;
+  }
+
+  /* ── 진행 상황: 끝낸 일은 체크, 다음 할 일은 강조 ── */
+  function drawProgress() {
+    var active = state.courses.filter(function (c) { return c.active; }).length;
+    var items = [
+      [state.hasPassword, '교사 비밀번호 정하기', 'sec3'],
+      [active > 0, '수업 넣기' + (active ? ' (지금 ' + active + '개)' : ''), 'sec6'],
+      [state.students > 0, '학생 명단 넣기' + (state.students ? ' (지금 ' + state.students + '명)' : ''), 'sec7'],
+      [!!state.url, '웹앱 주소 만들기', 'sec8'],
+      [false, '학생에게 QR 보여 주고 첫 접속 하기', 'sec8']
+    ];
+    var box = $('progress'), next = -1;
+    box.textContent = '';
+    items.forEach(function (it, i) { if (next < 0 && !it[0] && !(i === 4 && !state.url)) next = i; });
+    items.forEach(function (it, i) {
+      var row = el('button', 'todo' + (it[0] ? ' done' : '') + (i === next ? ' now' : ''));
+      row.type = 'button';
+      row.appendChild(el('i', '', it[0] ? '✓' : String(i + 1)));
+      row.appendChild(el('span', '', it[1]));
+      if (i === next) row.appendChild(el('em', '', i === 4 ? '마지막 단계' : '지금 할 일'));
+      row.addEventListener('click', function () {
+        var target = $(it[2]);
+        if (it[2] === 'sec8') { if (state.url) { if (i === 4) $('firstClass').open = true; } else $('deployHelp').open = true; }
+        window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - 8, behavior: 'smooth' });
+      });
+      box.appendChild(row);
+    });
+  }
+
+  /* ── 웹앱 주소와 QR ── */
+  function firstSteps() {
+    return ['폰은 QR을 찍고, 노트북은 선생님이 준 링크를 눌러 들어옵니다.',
+      '학번과 이름을 입력합니다.',
+      '처음 한 번만 "' + state.codeLabel + '"를 입력하고, 앞으로 쓸 PIN 4자리를 정합니다.',
+      '폰은 "홈 화면에 추가", 노트북은 북마크를 해 둡니다. 다음부터는 PIN만 입력하면 됩니다.'];
+  }
+  function drawDeploy() {
+    $('qrCard').hidden = !state.url;
+    if (!state.url) $('deployHelp').open = true;
+    $('url').textContent = state.url || '';
+    if (state.url) paintQr($('qr'), state.url);
+    ['firstSteps', 'bigSteps'].forEach(function (id) {
+      var ol = $(id);
+      ol.textContent = '';
+      firstSteps().forEach(function (t) { ol.appendChild(el('li', '', t)); });
+    });
+  }
+  function reload(message) {
+    return run('wizLoad').then(function (s) {
+      state.url = s.url; state.students = s.students; state.withPin = s.withPin; state.noCode = s.noCode;
+      drawProgress(); drawDeploy();
+      $('urlMsg').className = 'hint ' + (s.url ? 'ok' : '');
+      $('urlMsg').textContent = s.url ? '주소를 확인했습니다. 위에 QR이 나타났습니다.' : (message || '아직 주소가 없습니다. 배포한 뒤 웹 앱 주소를 한 번 열고 다시 눌러 주세요.');
+    });
+  }
+  $('urlCheck').addEventListener('click', function () { $('urlCheck').disabled = true; reload().catch(function (e) { $('urlMsg').className = 'hint bad'; $('urlMsg').textContent = clean(e); }).then(function () { $('urlCheck').disabled = false; }); });
+  $('urlSet').addEventListener('click', function () {
+    var v = $('urlInput').value.trim();
+    if (!v) { $('urlMsg').className = 'hint bad'; $('urlMsg').textContent = '배포 창의 웹 앱 주소를 복사해 붙여넣어 주세요.'; return; }
+    $('urlSet').disabled = true;
+    run('wizSetUrl', v).then(function (s) { state.url = s.url; $('urlInput').value = ''; drawProgress(); drawDeploy(); $('urlMsg').className = 'hint ok'; $('urlMsg').textContent = '주소를 넣었습니다. 위에 QR이 나타났습니다.'; })
+      .catch(function (e) { $('urlMsg').className = 'hint bad'; $('urlMsg').textContent = clean(e); })
+      .then(function () { $('urlSet').disabled = false; });
+  });
+  $('urlCopy').addEventListener('click', function () {
+    var done = function () { $('urlCopy').textContent = '복사했습니다'; setTimeout(function () { $('urlCopy').textContent = '주소 복사'; }, 1500); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(state.url).then(done, function () { window.getSelection().selectAllChildren($('url')); });
+    else window.getSelection().selectAllChildren($('url'));
+  });
+  $('qrSave').addEventListener('click', function () {
+    var c = document.createElement('canvas'); c.width = 1024; c.height = 1024;
+    paintQr(c, state.url);
+    var a = el('a'); a.href = c.toDataURL('image/png'); a.download = (state.title || '수업 페이지') + '_QR.png';
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+  $('qrBig').addEventListener('click', function () {
+    $('bigTitle').textContent = state.title;
+    $('bigUrl').textContent = state.url;
+    paintQr($('bigQr'), state.url);
+    $('big').hidden = false;
+  });
+  $('bigClose').addEventListener('click', function () { $('big').hidden = true; });
+
+  /* ── 불러오기와 저장 ── */
+  function fill(s) {
+    state = s;
+    $('title').value = s.title; $('school').value = s.school; $('tab').value = s.tab; $('refsLabel').value = s.refsLabel || '';
+    setColors(s.accent || '', s.tint || '');
+    $('pwState').textContent = s.hasPassword ? '새 비밀번호 (지금 설정되어 있음)' : '비밀번호 (아직 없음, 꼭 정해 주세요)';
+    $('password').value = '';
+    $('sg').value = s.idShape[0]; $('sc').value = s.idShape[1]; $('sn').value = s.idShape[2];
+    lockShape(); drawShape();
+    $('codeLabel').value = s.codeLabel; $('codeHint').value = s.codeHint;
+    var preset = s.codeLabel + '|' + s.codeHint;
+    $('codePreset').value = [].some.call($('codePreset').options, function (o) { return o.value === preset; }) ? preset : '';
+    drawCode();
+    courses = s.courses.filter(function (c) { return c.active; }).map(function (c) { return { id: c.id, name: c.name, kind: c.kind, desc: c.desc, classes: c.classes, active: true }; });
+    drawCourses(); drawRosterCourses(); drawRosterState();
+    drawProgress(); drawDeploy();
+  }
+  $('save').addEventListener('click', function () {
+    if (!$('title').value.trim()) { say('앱 이름을 적어 주세요.', 'bad'); return; }
+    if (!state.hasPassword && $('password').value.length < 6) { say('교사 비밀번호를 6자 이상으로 정해 주세요.', 'bad'); return; }
+    $('save').disabled = true; say('저장하는 중');
+    run('wizSave', { title: $('title').value, school: $('school').value, tab: $('tab').value, refsLabel: $('refsLabel').value, accent: accent, tint: tint, themeCss: themeCss(),
+      password: $('password').value, idShape: shape(), codeLabel: $('codeLabel').value, codeHint: $('codeHint').value, courses: courses
+    }).then(function (s) { fill(s); say('저장했습니다. 웹앱을 새로고침하면 보입니다.', 'ok'); })
+      .catch(function (err) { say(clean(err), 'bad'); })
+      .then(function () { $('save').disabled = false; });
+  });
+
+  run('wizLoad').then(function (s) {
+    fill(s);
+    $('loading').hidden = true; $('form').hidden = false; $('bar').hidden = false;
+  }).catch(function (err) { $('loading').className = 'hint bad'; $('loading').textContent = clean(err); });
+})();
+</script>
+</body>
+</html>

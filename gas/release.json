@@ -1,0 +1,22 @@
+{
+  "version": "20261015.0919",
+  "note": "출결 탭 추가 · 자동 업데이트 기능",
+  "files": [
+    {
+      "name": "Code.gs",
+      "sha256": "3f9b470d08cb013124bbd257a920e5526009d3845402e637f083f8acafaa4598"
+    },
+    {
+      "name": "Demo.gs",
+      "sha256": "f008d3c9775b14a896eb8a46c9a8bd140812db8bba76e078b31c1aaa3d4baaba"
+    },
+    {
+      "name": "Index.html",
+      "sha256": "dd3e428ff63826b79f65727d064aca6fb62aecc86b7b97a341069d8c43b0cb2c"
+    },
+    {
+      "name": "Setup.html",
+      "sha256": "3f3c7a625d808fc303ab8dda6c0903dd46750b92cb8ecc61d51c133bed2bd852"
+    }
+  ]
+}
