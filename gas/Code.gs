@@ -1188,7 +1188,7 @@ function apiMyPreviews(token, taskId) {
       let blob = file.getThumbnail();              // 드라이브가 만든 작은 미리보기
       if (!blob && file.getSize() < 1.5 * MB) blob = file.getBlob(); // 아직 없으면 작은 원본으로
       if (blob) out[f.id] = 'data:' + (blob.getContentType() || 'image/png') + ';base64,' + Utilities.base64Encode(blob.getBytes());
-    } catch (e) {}
+    } catch (e) { noteErr_('미리보기', e); }
   });
   return { ok: true, previews: out };
 }
@@ -1447,7 +1447,7 @@ function apiTeacherDetail(token, taskId, studentId) {
   const v = sub.v;
   let thumb = '';
   if (v[S.THUMB]) {
-    try { thumb = 'data:image/jpeg;base64,' + Utilities.base64Encode(DriveApp.getFileById(String(v[S.THUMB])).getBlob().getBytes()); } catch (e) {}
+    try { thumb = 'data:image/jpeg;base64,' + Utilities.base64Encode(DriveApp.getFileById(String(v[S.THUMB])).getBlob().getBytes()); } catch (e) { noteErr_('대표 썸네일', e); }
   }
   out.submission = {
     at: v[S.AT] instanceof Date ? koDate_(v[S.AT]) : '',
@@ -1465,7 +1465,7 @@ function apiTeacherDetail(token, taskId, studentId) {
         try {
           const b = DriveApp.getFileById(f.id).getThumbnail();
           if (b) item.small = 'data:' + (b.getContentType() || 'image/png') + ';base64,' + Utilities.base64Encode(b.getBytes());
-        } catch (e) {}
+        } catch (e) { noteErr_('작은 미리보기', e); }
       }
       return item;
     }),
@@ -2628,7 +2628,7 @@ function apiGalleryThumbs(token, taskId, keys) {
     if (!valid[key]) return;
     let b64 = cache.get('th:' + key);
     if (!b64) {
-      try { b64 = Utilities.base64Encode(DriveApp.getFileById(key).getBlob().getBytes()); } catch (e) { return; }
+      try { b64 = Utilities.base64Encode(DriveApp.getFileById(key).getBlob().getBytes()); } catch (e) { noteErr_('모아보기 썸네일', e); return; }
       if (b64.length < 95000) { try { cache.put('th:' + key, b64, 21600); } catch (e) {} }
     }
     out[key] = 'data:image/jpeg;base64,' + b64;
@@ -2876,6 +2876,7 @@ function syncLog_(text) {
 
 /** 5분마다 도는 트리거. 실패해도 웹앱은 그대로 (바꾸기 전에 멈춘다). */
 function autoSyncTick() {
+  try { selfCheck_(); } catch (e) { syncLog_('진단 실패: ' + e.message); }
   try {
     const r = syncNow_(false);
     if (r.changed) syncLog_('적용 완료: ' + r.version + (r.note ? ' — ' + r.note : '') + ' (웹앱 버전 ' + r.deployVersion + ')');
@@ -2914,4 +2915,39 @@ function autoSyncStatus() {
 function autoSyncOff() {
   ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'autoSyncTick') ScriptApp.deleteTrigger(t); });
   SpreadsheetApp.getUi().alert('자동 업데이트를 껐어요. 이제 코드는 직접 바꿔야 반영돼요.');
+}
+
+
+/* ───────────── 문제 기록 ─────────────
+ * 화면이 깨지지 않게 조용히 넘기던 오류를 [진단] 시트에 남긴다 (같은 곳은 10분에 한 번). */
+function noteErr_(where, e) {
+  try {
+    const cache = CacheService.getScriptCache();
+    if (cache.get('err:' + where)) return;
+    cache.put('err:' + where, '1', 600);
+    diagRow_(where, String(e && e.message || e));
+  } catch (x) {}
+}
+function diagRow_(what, detail) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName('진단');
+  if (!sh) { sh = ss.insertSheet('진단'); sh.appendRow(['일시', '항목', '내용']); }
+  sh.appendRow([Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm:ss'), what, String(detail).slice(0, 500)]);
+}
+/** 자동 업데이트 직후 한 번: 드라이브 파일을 실제로 읽어 보고 결과를 [진단] 시트에 적는다. */
+const SELFCHECK_ID = 'thumb-1';
+function selfCheck_() {
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty('SELFCHECK_DONE') === SELFCHECK_ID) return;
+  props.setProperty('SELFCHECK_DONE', SELFCHECK_ID);
+  try { diagRow_('권한 상태', String(ScriptApp.getAuthorizationInfo(ScriptApp.AuthMode.FULL).getAuthorizationStatus())); } catch (e) { diagRow_('권한 상태', '확인 실패: ' + e.message); }
+  const rows = rows_(SHEET.SUBS, SUB_HEADERS.length).filter(function (r) { return r[S.THUMB]; }).slice(-3);
+  diagRow_('썸네일 있는 제출', rows.length + '건 확인');
+  rows.forEach(function (r) {
+    const id = String(r[S.THUMB]);
+    try { diagRow_('썸네일 읽기 ' + r[S.NAME], '성공 ' + DriveApp.getFileById(id).getBlob().getBytes().length + '바이트'); }
+    catch (e) { diagRow_('썸네일 읽기 ' + r[S.NAME], '실패: ' + e.message); }
+    try { const b = DriveApp.getFileById(id).getThumbnail(); diagRow_('드라이브 미리보기 ' + r[S.NAME], b ? '성공' : '없음(null)'); }
+    catch (e) { diagRow_('드라이브 미리보기 ' + r[S.NAME], '실패: ' + e.message); }
+  });
 }

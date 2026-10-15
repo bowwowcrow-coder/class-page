@@ -1,10 +1,10 @@
 {
-  "version": "20261015.0958",
-  "note": "출결: 나이스 한눈에 보기 화면 추가",
+  "version": "20261015.1035",
+  "note": "썸네일 오류 기록 + 1회 점검",
   "files": [
     {
       "name": "Code.gs",
-      "sha256": "169b3f977db7d96edcd73f757a3c17726882ee85f16da6bd9e9a4c3d1542034a"
+      "sha256": "f5fdd9bd9163cc05a501af82268db5c03ab9e4a5d57de7345186eb01c8c970d3"
     },
     {
       "name": "Demo.gs",
