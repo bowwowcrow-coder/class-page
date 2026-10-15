@@ -2792,9 +2792,13 @@ function scriptApi_(method, path, body) {
   const r = UrlFetchApp.fetch('https://script.googleapis.com/v1/projects/' + ScriptApp.getScriptId() + path, opt);
   const code = r.getResponseCode(), text = r.getContentText();
   if (code >= 300) {
-    if (/has not enabled|not been used|SERVICE_DISABLED|User has not/i.test(text))
-      throw new Error('Apps Script API가 꺼져 있어요. script.google.com/home/usersettings 에서 "Google Apps Script API"를 켠 뒤 다시 해 주세요.');
-    if (code === 403) throw new Error('권한이 부족해요. appsscript.json 에 자동 업데이트용 권한(oauthScopes)이 들어 있는지 확인해 주세요.');
+    let raw = text; try { raw = JSON.parse(text).error.message || text; } catch (e) {}
+    raw = '\n\n[구글 원문] ' + String(raw).slice(0, 300);
+    if (/User has not enabled/i.test(text))
+      throw new Error('Apps Script API가 꺼져 있어요. script.google.com/home/usersettings 에서 "Google Apps Script API"를 켠 뒤 다시 해 주세요.' + raw);
+    if (/not been used in project|SERVICE_DISABLED/i.test(text))
+      throw new Error('스크립트에 연결된 구글 클라우드 프로젝트에서 Apps Script API가 꺼져 있어요.' + raw);
+    if (code === 403) throw new Error('권한이 부족해요. appsscript.json 에 자동 업데이트용 권한(oauthScopes)이 들어 있는지 확인해 주세요.' + raw);
     throw new Error('Apps Script API 오류 (' + code + '): ' + text.slice(0, 200));
   }
   return text ? JSON.parse(text) : {};
