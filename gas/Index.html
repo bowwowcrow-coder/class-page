@@ -406,6 +406,21 @@
   .nz-date button { height: 28px; padding: 0 10px; border: 0; border-radius: 14px; background: var(--fill); font: inherit; font-size: 13px; color: var(--ink); cursor: pointer; }
   .nz-filter { display: flex; gap: 6px; margin: 4px 0 2px; }
   .nz-filter .ac { height: 32px; font-size: 14px; }
+  /* 서류 확인 */
+  .dz-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 10px 14px; }
+  .dz-row + .dz-row { border-top: 1px solid var(--line); }
+  .dz-row .nzw { flex: none; width: 84px; overflow: hidden; font-size: 15px; white-space: nowrap; text-overflow: ellipsis; }
+  .dz-row .nzw i { display: inline-block; width: 22px; font-style: normal; color: var(--sub); font-variant-numeric: tabular-nums; }
+  .dz-row .w { flex: 1; min-width: 0; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dz-row .w small { margin-left: 4px; font-size: 13px; font-weight: 500; color: var(--sub); }
+  .dz-row .w .warn { color: var(--danger); }
+  .dz-docs { display: flex; flex-wrap: wrap; gap: 6px; }
+  .dc { height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); font: inherit; font-size: 14px; color: var(--ink); cursor: pointer; }
+  .dc[aria-pressed="true"] { border-color: var(--accent); background: var(--accent); color: #fff; font-weight: 600; }
+  .dc.sub { border-style: dashed; color: var(--sub); }
+  .dz-none { font-size: 13px; color: var(--sub); }
+  .dz-row.done { opacity: .45; }
+  @media (max-width: 599px) { .dz-docs { width: 100%; padding-left: 32px; } }
   .pend { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   .pend button { height: 30px; padding: 0 10px; border: 0; border-radius: 15px; background: color-mix(in srgb, var(--lv1) 30%, transparent); font: inherit; font-size: 13px; color: var(--ink); cursor: pointer; }
   .grid td small { display: block; font-size: 11px; line-height: 1.2; color: var(--sub); }
@@ -2157,6 +2172,17 @@
 
   /* ── 출결 (교사, 학급) ── */
   var ATT_TYPES = ['결석', '지각', '조퇴', '결과'], ATT_CATS = ['질병', '미인정', '인정', '기타'];
+  var ATT_KINDS = ['생리통', '현장체험(국내)', '현장체험(국외)', '대입', '교내행사', '현장실습', '기타'];
+  var KIND_DOCS = { '생리통': ['출결계'], '현장체험(국내)': ['출결계', '신청서', '보고서'], '현장체험(국외)': ['출결계', '신청서', '보고서'], '대입': ['증빙서류'], '교내행사': [], '현장실습': [] };
+  var SICK_DOC = '병원증빙';
+  // 받아야 할 서류 (서버 attNeed_와 같은 규칙)
+  function attNeed(r) {
+    if (!r) return [];
+    if (r.cat === '질병') return r.type === '결석' ? ['출결계', SICK_DOC] : [SICK_DOC];
+    if (r.cat !== '인정') return [];
+    if (r.kind === '기타') return r.docName && r.docName !== '없음' ? [r.docName] : [];
+    return (KIND_DOCS[r.kind] || []).slice();
+  }
   var DAYS = ['일', '월', '화', '수', '목', '금', '토'];
   function ymd(d) { var p = function (n) { return (n < 10 ? '0' : '') + n; }; return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
   function shiftDate(s, n) { var p = s.split('-').map(Number); return ymd(new Date(p[0], p[1] - 1, p[2] + n)); }
@@ -2164,7 +2190,7 @@
   var att = { mode: 'day', date: ymd(new Date()), month: ymd(new Date()).slice(0, 7), day: null, open: null, busy: 0, course: null };
   function recText(r) {
     if (!r) return '출석';
-    var t = r.type + (r.cat ? '·' + r.cat : '');
+    var t = r.type + (r.cat ? '·' + r.cat : '') + (r.kind ? '(' + r.kind + ')' : '');
     if (r.type === '결과' && r.periods.length) t += ' ' + r.periods.join(',') + '교시';
     if (r.type === '조퇴' && r.periods.length) t += ' ' + r.periods[0] + '교시~';
     return t;
@@ -2187,7 +2213,7 @@
     var per = neisPer(it); if (per) w.appendChild(el('small', '', per));
     if (!it.cat) w.appendChild(el('small', 'warn', '구분?'));
     lab.appendChild(w);
-    lab.appendChild(el('span', 'rs', it.reason || ''));
+    lab.appendChild(el('span', 'rs', [it.kind, it.reason].filter(Boolean).join(' · ')));
     cb.addEventListener('change', function () {
       var v = cb.checked; it.neis = v; lab.classList.toggle('done', v);
       onDone(v).catch(function (err) { it.neis = !v; cb.checked = !v; lab.classList.toggle('done', !v); if (err && err.message !== 'expired') alertSheet(friendly(err)); });
@@ -2261,7 +2287,7 @@
       items[s.id] = { item: item, pill: pill, edit: edit, s: s };
     });
     body.appendChild(list);
-    var neisHead = el('h3', 'group-title', '나이스 입력 목록');
+    var neisHead = el('h3', 'group-title', '서류 확인');
     body.appendChild(neisHead);
     var neis = el('div', 'list');
     body.appendChild(neis);
@@ -2274,6 +2300,7 @@
       x.pill.textContent = '';
       x.pill.appendChild(document.createTextNode(recText(r)));
       if (r && !r.cat) x.pill.appendChild(el('span', 'warn', ' · 구분?'));
+      if (r && r.cat === '인정' && !r.kind) x.pill.appendChild(el('span', 'warn', ' · 사유?'));
     }
     function paintSide() {
       var c = { 출석: 0 }; ATT_TYPES.forEach(function (t) { c[t] = 0; });
@@ -2284,23 +2311,55 @@
       neis.textContent = '';
       var rows = d.students.filter(function (s) { return s.rec; });
       if (!rows.length) neis.appendChild(el('p', 'empty', '모두 출석입니다.'));
-      rows.forEach(function (s) {
-        var it = { num: s.num, name: s.name, type: s.rec.type, cat: s.rec.cat, periods: s.rec.periods, reason: s.rec.reason, neis: s.rec.neis };
-        neis.appendChild(neisRow(it, function (v) {
-          s.rec.neis = v;
-          return call('apiTeacherAttendNeis', ttoken, tCourse, d.date, s.id, v).then(function (res) { applyDay(must(res)); }, function (err) { s.rec.neis = !v; throw err; });
-        }));
-      });
-      // 이번 달 다른 날의 나이스 미입력
+      rows.forEach(function (s) { neis.appendChild(docRow(s)); });
+      // 다른 날 서류 덜 받은 것
       pendBox.textContent = '';
-      var others = d.pending.filter(function (p) { return p.date !== d.date; });
+      var others = (d.docsLeft || []).filter(function (p) { return p.date !== d.date; });
+      var pend = el('div', 'pend');
       if (others.length) {
-        pendBox.appendChild(el('p', 'hint', '이번 달 나이스 미입력이 남은 날'));
-        var pend = el('div', 'pend');
-        others.forEach(function (p) { pend.appendChild(button('', shortDate(p.date) + ' ' + p.count + '건', function () { fetchAttDay(body, p.date); window.scrollTo(0, 0); })); });
-        pend.appendChild(button('', '나이스 화면에서 한눈에 보기 ›', function () { att.mode = 'neis'; att.month = d.date.slice(0, 7); loadAttend(); window.scrollTo(0, 0); }));
-        pendBox.appendChild(pend);
+        pendBox.appendChild(el('p', 'hint', '서류를 덜 받은 날'));
+        others.forEach(function (p) { pend.appendChild(button('', shortDate(p.date) + ' ' + p.count + '명', function () { fetchAttDay(body, p.date); window.scrollTo(0, 0); })); });
       }
+      pend.appendChild(button('', '나이스 입력 화면 ›', function () { att.mode = 'neis'; att.month = d.date.slice(0, 7); loadAttend(); window.scrollTo(0, 0); }));
+      pendBox.appendChild(pend);
+    }
+    // 서류 확인 한 줄: 이름 · 출결 · 받을 서류 칩 (누르면 받음)
+    function docRow(s) {
+      var r = s.rec, need = attNeed(r);
+      var row = el('div', 'dz-row');
+      var who = el('span', 'nzw'); who.appendChild(el('i', '', s.num)); who.appendChild(document.createTextNode(s.name));
+      row.appendChild(who);
+      var w = el('span', 'w', neisWord(r));
+      if (r.kind) w.appendChild(el('small', '', r.kind));
+      if (!r.cat) w.appendChild(el('small', 'warn', '구분?'));
+      else if (r.cat === '인정' && !r.kind) w.appendChild(el('small', 'warn', '사유?'));
+      else if (r.kind === '기타' && !r.docName) w.appendChild(el('small', 'warn', '서류?'));
+      row.appendChild(w);
+      var box = el('div', 'dz-docs');
+      if (!need.length) box.appendChild(el('span', 'dz-none', r.cat === '인정' && r.kind && (r.kind !== '기타' || r.docName) ? '서류 없음' : ''));
+      var done = function () { return need.every(function (n) { return !!(r.docs || {})[n]; }); };
+      need.forEach(function (n) {
+        var got = (r.docs || {})[n];
+        var b = button('dc', (got ? '✓ ' : '') + n + (got === '갈음' ? ' (전날 서류)' : ''), function () { setDoc(s, n, got ? false : true); });
+        b.setAttribute('aria-pressed', got ? 'true' : 'false');
+        box.appendChild(b);
+        // 연속 질병: 전날 병원 증빙으로 갈음
+        if (n === SICK_DOC && !got && r.prevDoc) box.appendChild(button('dc sub', '전날 서류로 갈음', function () { setDoc(s, n, '갈음'); }));
+      });
+      row.appendChild(box);
+      if (need.length && done()) row.classList.add('done');
+      return row;
+    }
+    function setDoc(s, n, v) {
+      var x = items[s.id], r = s.rec;
+      r.docs = r.docs || {};
+      var old = r.docs[n];
+      if (v) r.docs[n] = v; else delete r.docs[n];
+      paintSide();
+      att.busy++;
+      x.q = (x.q || Promise.resolve()).then(function () { return call('apiTeacherAttendDoc', ttoken, tCourse, d.date, s.id, n, v); })
+        .then(function (res) { att.busy--; applyDay(must(res)); })
+        .catch(function (err) { att.busy--; if (old) r.docs[n] = old; else delete r.docs[n]; paintSide(); if (err && err.message !== 'expired') alertSheet(friendly(err)); });
     }
     // 서버 응답이 오면: 펼쳐 둔 학생의 입력 칸은 건드리지 않고 나머지만 맞춘다
     function applyDay(res) {
@@ -2312,11 +2371,11 @@
         else x.s.rec = s.rec;
         paintPill(x);
       });
-      d.pending = res.pending;
+      d.pending = res.pending; d.docsLeft = res.docsLeft;
       paintSide();
     }
     function save(x) {
-      var s = x.s, rec = s.rec ? { type: s.rec.type, cat: s.rec.cat, periods: s.rec.periods, reason: s.rec.reason } : { type: '출석' };
+      var s = x.s, rec = s.rec ? { type: s.rec.type, cat: s.rec.cat, periods: s.rec.periods, reason: s.rec.reason, kind: s.rec.kind || '', docName: s.rec.docName || '' } : { type: '출석' };
       paintPill(x); paintSide();
       x.saved.textContent = '저장하는 중';
       att.busy++;
@@ -2343,12 +2402,30 @@
       e.appendChild(chips('출결', ['출석'].concat(ATT_TYPES), function (v) { return (r ? r.type : '출석') === v; }, function (v) {
         var c = s.rec;
         if (v === '출석') s.rec = null;
-        else if (!c) s.rec = { type: v, cat: '', periods: [], reason: '', neis: false };
+        else if (!c) s.rec = { type: v, cat: '', periods: [], reason: '', neis: false, kind: '', docName: '', docs: {}, need: [] };
         else { c.type = v; if (v !== '조퇴' && v !== '결과') c.periods = []; if (v === '조퇴') c.periods = c.periods.slice(-1); }
         drawEdit(x); save(x);
       }));
       if (r) {
-        e.appendChild(chips('구분', ATT_CATS, function (v) { return r.cat === v; }, function (v) { var c = s.rec; c.cat = c.cat === v ? '' : v; drawEdit(x); save(x); }));
+        e.appendChild(chips('구분', ATT_CATS, function (v) { return r.cat === v; }, function (v) { var c = s.rec; c.cat = c.cat === v ? '' : v; if (c.cat !== '인정') { c.kind = ''; c.docName = ''; } drawEdit(x); save(x); }));
+        if (r.cat === '인정') {
+          e.appendChild(chips('인정 사유', ATT_KINDS, function (v) { return r.kind === v; }, function (v) { var c = s.rec; c.kind = c.kind === v ? '' : v; if (c.kind !== '기타') c.docName = ''; drawEdit(x); save(x); }));
+          if (r.kind === '기타') {
+            // 기타: 받을 서류 이름을 직접 적거나 '서류 없음'
+            e.appendChild(el('p', 'att-lab', '받을 서류'));
+            var dn = el('input'); dn.type = 'text'; dn.maxLength = 30; dn.placeholder = '예: 참가확인서'; dn.value = r.docName === '없음' ? '' : (r.docName || '');
+            dn.disabled = r.docName === '없음';
+            var dnCommit = function () { var c = s.rec; var v = dn.value.trim(); if (c && v !== (c.docName === '없음' ? '' : c.docName || '')) { c.docName = v; save(x); } };
+            dn.addEventListener('change', dnCommit);
+            dn.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); dn.blur(); } });
+            e.appendChild(dn);
+            var none = el('div', 'acs');
+            var nb = button('ac', '서류 없음', function () { var c = s.rec; c.docName = c.docName === '없음' ? '' : '없음'; drawEdit(x); save(x); });
+            nb.setAttribute('aria-pressed', r.docName === '없음' ? 'true' : 'false');
+            none.appendChild(nb);
+            e.appendChild(none);
+          }
+        }
         if (r.type === '조퇴' || r.type === '결과') {
           var per = []; for (var k = 1; k <= d.periods; k++) per.push(k);
           e.appendChild(chips(r.type === '조퇴' ? '몇 교시부터 조퇴했나요' : '빠진 교시 (여러 개 고를 수 있어요)', per, function (v) { return r.periods.indexOf(v) >= 0; }, function (v) {
@@ -2358,8 +2435,8 @@
             drawEdit(x); save(x);
           }, true));
         }
-        e.appendChild(el('p', 'att-lab', '사유'));
-        var reason = el('input'); reason.type = 'text'; reason.maxLength = 60; reason.placeholder = '한 줄로 (선택)'; reason.value = r.reason || '';
+        e.appendChild(el('p', 'att-lab', r.kind === '기타' ? '기타 사유' : '사유'));
+        var reason = el('input'); reason.type = 'text'; reason.maxLength = 60; reason.placeholder = r.kind === '기타' ? '어떤 사유인지 적어 주세요' : '한 줄로 (선택)'; reason.value = r.reason || '';
         var timer = null;
         x.reasonInput = reason;
         var commit = function () { clearTimeout(timer); var c = s.rec; if (c && reason.value.trim() !== (c.reason || '')) { c.reason = reason.value.trim(); save(x); } };

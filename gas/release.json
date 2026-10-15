@@ -1,10 +1,10 @@
 {
-  "version": "20261015.1050",
-  "note": "드라이브 API 켠 뒤 재점검",
+  "version": "20261015.1242",
+  "note": "출결: 인정 사유 선택, 하단을 서류 확인 체크로",
   "files": [
     {
       "name": "Code.gs",
-      "sha256": "6dcee5a48e5de318f14f89b33c10979e08a62c89dccbdb0288979ef1690206be"
+      "sha256": "c94b89c7ad9e43183c59ae8a55d9dd2919ad66979a2b5cc54c330b30257327a0"
     },
     {
       "name": "Demo.gs",
@@ -12,7 +12,7 @@
     },
     {
       "name": "Index.html",
-      "sha256": "b6f77ffa8fa76cede163927c9e7ffed04a86b52eefd8004224ee283e5772d4de"
+      "sha256": "b38f5fcdd489ffa6ffab7b3127cae1222a372092eb76f8524f388a64d0c19283"
     },
     {
       "name": "Setup.html",

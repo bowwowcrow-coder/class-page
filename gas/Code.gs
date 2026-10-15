@@ -25,7 +25,7 @@ const CFG_HELP = {
 };
 // 설정 도우미가 생기기 전부터 쓰던 시트는 예전에 보이던 그대로 이어 간다
 const LEGACY = { school: '인천디자인고등학교', tab: '쉅', refsLabel: '레퍼런스' };
-const SCHEMA_VERSION = '15';            // 시트 구조가 바뀌는 업데이트마다 올린다 → 첫 접속 때 setup이 자동으로 돈다
+const SCHEMA_VERSION = '16';            // 시트 구조가 바뀌는 업데이트마다 올린다 → 첫 접속 때 setup이 자동으로 돈다
 const TZ = 'Asia/Seoul';
 const SHEET = { COURSES: '수업', STUDENTS: '학생', NOTICES: '공지', REFS: '레퍼런스', TASKS: '과제', SUBS: '제출', GRADES: '채점', ALLOW: '허용', LOG: '로그', CONFIG: '설정', START: '시작하기', SURVEYS: '설문', ANSWERS: '응답', MEMES: '메인짤', ATTEND: '출결' };
 
@@ -48,7 +48,7 @@ const ALLOW_HEADERS = ['과제ID', '학번', '허용일시'];
 const LOG_HEADERS = ['일시', '학번', '이름', '동작', '상세'];
 const SURVEY_HEADERS = ['설문ID', '수업', '제목', '설명', '익명', '문항', '응답 받기', '마감', '게시', '참여'];
 const ANSWER_HEADERS = ['설문ID', '학번', '이름', '응답일시', '응답'];
-const ATTEND_HEADERS = ['날짜', '수업', '학번', '이름', '유형', '구분', '교시', '사유', '나이스 입력', '수정일시'];
+const ATTEND_HEADERS = ['날짜', '수업', '학번', '이름', '유형', '구분', '교시', '사유', '나이스 입력', '수정일시', '인정 사유', '받은 서류', '서류 직접'];
 const MEME_HEADERS = ['짤ID', '학번', '이름', '올린일시', '문구', '상태', '호수', '파일ID', '썸네일', '투표', '이름 공개'];
 const C = { ID: 0, NAME: 1, COURSES: 2, CODE: 3, HASH: 4, SALT: 5, FAILS: 6, LOCK: 7, SETAT: 8, LAST: 9, NOTE: 10 };
 const S = { TASK: 0, ID: 1, NAME: 2, AT: 3, FIRST: 4, STATE: 5, LATE: 6, COUNT: 7, FOLDER: 8, ZIP: 9, THUMB: 10, FILES: 11, ALT: 12 };
@@ -2148,7 +2148,12 @@ function apiTeacherMemeDelete(token, id) {
  * 유형: 결석·지각·조퇴·결과, 구분: 질병·미인정·인정·기타
  * 교시: 결과는 빠진 교시들(예: 3,4), 조퇴는 떠난 교시 하나(예: 5 → 5교시부터)
  */
-const AT = { DATE: 0, COURSE: 1, SID: 2, NAME: 3, TYPE: 4, CAT: 5, PER: 6, REASON: 7, NEIS: 8, AT: 9 };
+const AT = { DATE: 0, COURSE: 1, SID: 2, NAME: 3, TYPE: 4, CAT: 5, PER: 6, REASON: 7, NEIS: 8, AT: 9, KIND: 10, DOCS: 11, DOCNAME: 12 };
+// 인정 사유와 받아야 할 서류 (기타는 선생님이 서류 이름을 직접 적거나 '없음')
+const ATT_KINDS = ['생리통', '현장체험(국내)', '현장체험(국외)', '대입', '교내행사', '현장실습', '기타'];
+const KIND_DOCS = { '생리통': ['출결계'], '현장체험(국내)': ['출결계', '신청서', '보고서'], '현장체험(국외)': ['출결계', '신청서', '보고서'],
+  '대입': ['증빙서류'], '교내행사': [], '현장실습': [] };
+const SICK_DOC = '병원증빙'; // 연속 이틀 정도는 전날 서류 한 장으로 갈음할 수 있다
 const ATT_TYPES = ['결석', '지각', '조퇴', '결과'];
 const ATT_CATS = ['질병', '미인정', '인정', '기타'];
 const PERIODS_BY_DAY = [6, 6, 7, 7, 6, 6, 6]; // 일~토 하루 교시 수 (이 학교: 화·수 7교시)
@@ -2179,10 +2184,29 @@ function attRows_(courseId) {
     return d ? { i: i, date: d, sid: normId_(r[AT.SID]), r: r } : null;
   }).filter(Boolean) };
 }
+/** 이 기록에 받아야 할 서류 이름들 */
+function attNeed_(type, cat, kind, docName) {
+  if (cat === '질병') return type === '결석' ? ['출결계', SICK_DOC] : [SICK_DOC];
+  if (cat !== '인정') return [];
+  if (kind === '기타') return docName && docName !== '없음' ? [docName] : [];
+  return (KIND_DOCS[kind] || []).slice();
+}
+function attDocs_(v) { try { const o = JSON.parse(String(v || '{}')); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
 function attView_(r) {
-  return { type: String(r[AT.TYPE] || ''), cat: String(r[AT.CAT] || ''),
+  const v = { type: String(r[AT.TYPE] || ''), cat: String(r[AT.CAT] || ''),
     periods: String(r[AT.PER] || '').split(',').map(Number).filter(function (n) { return n > 0; }),
-    reason: String(r[AT.REASON] || ''), neis: r[AT.NEIS] === true };
+    reason: String(r[AT.REASON] || ''), neis: r[AT.NEIS] === true,
+    kind: String(r[AT.KIND] || ''), docName: String(r[AT.DOCNAME] || ''), docs: attDocs_(r[AT.DOCS]) };
+  v.need = attNeed_(v.type, v.cat, v.kind, v.docName);
+  v.docsDone = v.need.every(function (n) { return !!v.docs[n]; });
+  return v;
+}
+/** 바로 앞 수업일 (주말은 건너뛴다) */
+function prevSchoolDay_(date) {
+  const p = date.split('-').map(Number);
+  let d = new Date(Date.UTC(p[0], p[1] - 1, p[2]));
+  do { d = new Date(d.getTime() - 86400000); } while (d.getUTCDay() === 0 || d.getUTCDay() === 6);
+  return d.toISOString().slice(0, 10);
 }
 
 function apiTeacherAttendDay(token, courseId, date) {
@@ -2191,14 +2215,23 @@ function apiTeacherAttendDay(token, courseId, date) {
   if (!date) return fail_('날짜를 다시 골라 주세요.');
   const ac = attCourse_(courseId);
   if (!ac) return fail_('출결은 학급(담임 반)에서만 쓸 수 있습니다.');
-  const recs = {}, month = date.slice(0, 7), pending = {};
+  const recs = {}, prev = {}, month = date.slice(0, 7), pending = {}, docsLeft = {}, before = prevSchoolDay_(date);
   attRows_(courseId).mine.forEach(function (m) {
-    if (m.date === date) recs[m.sid] = attView_(m.r);
+    const v = attView_(m.r);
+    if (m.date === date) recs[m.sid] = v;
+    if (m.date === before) prev[m.sid] = v;
     if (m.date.slice(0, 7) === month && m.r[AT.NEIS] !== true) pending[m.date] = (pending[m.date] || 0) + 1;
+    if (!v.docsDone) docsLeft[m.date] = (docsLeft[m.date] || 0) + 1; // 서류는 달을 넘겨도 계속 쫓는다
+  });
+  Object.keys(recs).forEach(function (sid) {
+    // 전날도 질병이고 병원 증빙을 받았으면, 오늘 것은 그 서류로 갈음할 수 있다
+    const p = prev[sid];
+    recs[sid].prevDoc = !!(p && p.cat === '질병' && p.docs[SICK_DOC] === true);
   });
   return { ok: true, date: date, day: dayOf_(date), periods: periodsOf_(date),
     students: ac.roster.map(function (s) { return { id: s.id, num: s.num, name: s.name, note: s.note, rec: recs[s.id] || null }; }),
-    pending: Object.keys(pending).sort().map(function (d) { return { date: d, count: pending[d] }; }) }; // 이번 달 나이스 미입력
+    pending: Object.keys(pending).sort().map(function (d) { return { date: d, count: pending[d] }; }), // 이번 달 나이스 미입력
+    docsLeft: Object.keys(docsLeft).sort().map(function (d) { return { date: d, count: docsLeft[d] }; }) }; // 서류 덜 받은 날
 }
 
 /** 한 학생의 하루 기록 저장. rec.type이 '출석'이면 기록을 지운다. */
@@ -2218,6 +2251,8 @@ function apiTeacherAttendSave(token, courseId, date, sid, rec) {
   if (type === '조퇴') periods = periods.slice(-1);           // 조퇴는 떠난 교시 하나
   if (type !== '조퇴' && type !== '결과') periods = [];
   const reason = String(rec.reason || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+  const kind = cat === '인정' && ATT_KINDS.indexOf(String(rec.kind || '')) >= 0 ? String(rec.kind) : '';
+  const docName = kind === '기타' ? String(rec.docName || '').replace(/\s+/g, ' ').trim().slice(0, 30) : '';
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
@@ -2229,7 +2264,9 @@ function apiTeacherAttendSave(token, courseId, date, sid, rec) {
       // 내용이 바뀌면 나이스 입력 체크는 풀린다 (다시 입력해야 하니까). 사유만 고친 경우는 그대로 둔다.
       const prev = old[0] ? attView_(old[0].r) : null;
       const same = prev && prev.type === type && prev.cat === cat && prev.periods.join(',') === periods.join(',');
-      const row = [date, courseId, sid, st.name, type, cat, periods.join(','), reason, !!(same && prev.neis), new Date()];
+      // 받은 서류는 종이가 이미 손에 있는 것이니 지우지 않는다 (필요 없어진 칸은 화면에서만 안 보인다)
+      const row = [date, courseId, sid, st.name, type, cat, periods.join(','), reason, !!(same && prev.neis), new Date(),
+        kind, JSON.stringify(prev ? prev.docs : {}), docName];
       if (old[0]) t.sh.getRange(old[0].i + 2, 1, 1, row.length).setValues([row]);
       else t.sh.getRange(t.sh.getLastRow() + 1, 1, 1, row.length).setValues([row]);
       old.slice(1).map(function (m) { return m.i; }).sort(function (a, b) { return b - a; }).forEach(function (i) { t.sh.deleteRow(i + 2); });
@@ -2250,6 +2287,26 @@ function apiTeacherAttendNeis(token, courseId, date, sid, done) {
   const ms = t.mine.filter(function (x) { return x.date === date && (sid === '*' || x.sid === sid); });
   if (!ms.length) return fail_('출석으로 바뀐 학생입니다. 새로고침해 주세요.');
   ms.forEach(function (m) { t.sh.getRange(m.i + 2, AT.NEIS + 1).setValue(done === true); });
+  return apiTeacherAttendDay(token, courseId, date);
+}
+
+/** 서류 받음 표시. value: true(받음) · '갈음'(전날 서류로 갈음) · false(안 받음) */
+function apiTeacherAttendDoc(token, courseId, date, sid, doc, value) {
+  if (!isTeacher_(token)) return expired_();
+  courseId = String(courseId); date = attDate_(date); sid = normId_(sid); doc = String(doc || '').slice(0, 30);
+  if (!date || !doc) return fail_('다시 시도해 주세요.');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const t = attRows_(courseId);
+    const m = t.mine.filter(function (x) { return x.date === date && x.sid === sid; })[0];
+    if (!m) return fail_('출석으로 바뀐 학생입니다. 새로고침해 주세요.');
+    const docs = attDocs_(m.r[AT.DOCS]);
+    if (value === true || value === '갈음') docs[doc] = value; else delete docs[doc];
+    t.sh.getRange(m.i + 2, AT.DOCS + 1).setValue(JSON.stringify(docs));
+  } finally {
+    lock.releaseLock();
+  }
   return apiTeacherAttendDay(token, courseId, date);
 }
 
