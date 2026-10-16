@@ -370,7 +370,7 @@
   .att-sum { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 10px 2px 12px; font-size: 14px; color: var(--sub); }
   .att-sum b { color: var(--ink); font-variant-numeric: tabular-nums; }
   .att-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 54px; padding: 8px 16px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
-  .att-row .no { flex: none; width: 26px; color: var(--sub); font-size: 14px; font-variant-numeric: tabular-nums; }
+  .att-row .no { flex: none; min-width: 26px; color: var(--sub); font-size: 14px; font-variant-numeric: tabular-nums; }
   .att-row .nm { flex: 1; min-width: 0; font-size: 16px; font-weight: 500; }
   .att-row .nm small { margin-left: 6px; font-size: 12px; font-weight: 400; color: var(--sub); }
   .att-pill { flex: none; max-width: 58%; overflow: hidden; text-overflow: ellipsis; padding: 4px 10px; border-radius: 12px; font-size: 13px; white-space: nowrap; color: var(--sub); }
@@ -434,6 +434,8 @@
   .dz-none { font-size: 13px; color: var(--sub); }
   .dz-row.done { opacity: .45; }
   @media (max-width: 599px) { .dz-docs { width: 100%; padding-left: 32px; } }
+  .nz-row .nzw i, .dz-row .nzw i { width: auto; min-width: 22px; margin-right: 4px; }
+  .nz-row .nzw, .dz-row .nzw { width: auto; min-width: 84px; }
   .pend { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   .pend button { height: 30px; padding: 0 10px; border: 0; border-radius: 15px; background: color-mix(in srgb, var(--lv1) 30%, transparent); font: inherit; font-size: 13px; color: var(--ink); cursor: pointer; }
   .grid td small { display: block; font-size: 11px; line-height: 1.2; color: var(--sub); }
@@ -2032,10 +2034,8 @@
     $('tSub').textContent = course.desc;
     $('tTitle').textContent = course.name;
     $('tseg').hidden = false;
-    var isClass = course.kind === 'class'; // 출결 탭은 학급(담임 반)에서만
-    if (!isClass && tView === 'attend') tView = 'board';
-    $('tAttTab').hidden = !isClass;
-    $('tseg').style.gridTemplateColumns = 'repeat(' + (isClass ? 7 : 6) + ', 1fr)';
+    $('tAttTab').hidden = false; // 출결은 모든 수업에서
+    $('tseg').style.gridTemplateColumns = 'repeat(7, 1fr)';
     $('tseg').querySelectorAll('button').forEach(function (b) {
       b.setAttribute('aria-selected', b.dataset.tview === tView ? 'true' : 'false');
     });
@@ -2224,13 +2224,21 @@
     var t = r.type + (r.cat ? '·' + r.cat : '') + (r.kind ? '(' + r.kind + ')' : '');
     if (r.type === '결과' && r.periods.length) t += ' ' + r.periods.join(',') + '교시';
     if (r.type === '조퇴' && r.periods.length) t += ' ' + r.periods[0] + '교시~';
+    if (r.type === '지각' && r.periods.length) t += ' ' + r.periods[0] + '교시';
     return t;
+  }
+  // 여러 반이 섞인 수업이면 번호 앞에 반을 붙인다 (예: 3-12)
+  function attNums(list) {
+    var cls = {}; list.forEach(function (s) { cls[s.cls] = 1; });
+    var multi = Object.keys(cls).length > 1;
+    list.forEach(function (s) { s.label = multi ? s.cls + '-' + s.num : String(s.num); });
   }
   // 나이스 화면에 고르는 순서대로: 구분+유형 (예: 질병결석)
   function neisWord(r) { return (r.cat || '') + r.type; }
   function neisPer(r) {
     if (r.type === '결과' && r.periods.length) return r.periods.join('·') + '교시';
     if (r.type === '조퇴' && r.periods.length) return r.periods[0] + '교시~';
+    if (r.type === '지각' && r.periods.length) return r.periods[0] + '교시';
     return '';
   }
   /** 나이스 입력 한 줄. it: {num, name, type, cat, periods, reason, neis}. onDone(done)은 Promise를 돌려준다. */
@@ -2238,7 +2246,7 @@
     var lab = el('label', 'nz-row' + (it.neis ? ' done' : ''));
     var cb = el('input'); cb.type = 'checkbox'; cb.checked = it.neis;
     lab.appendChild(cb);
-    var who = el('span', 'nzw'); who.appendChild(el('i', '', it.num)); who.appendChild(document.createTextNode(it.name));
+    var who = el('span', 'nzw'); who.appendChild(el('i', '', it.label || it.num)); who.appendChild(document.createTextNode(it.name));
     lab.appendChild(who);
     var w = el('span', 'w', neisWord(it));
     var per = neisPer(it); if (per) w.appendChild(el('small', '', per));
@@ -2302,10 +2310,11 @@
     // 명단: 누르면 그 자리에서 펼쳐 고른다
     var list = el('div', 'list');
     var items = {};
+    attNums(d.students);
     d.students.forEach(function (s) {
       var item = el('div', 'att-item');
       var row = button('att-row', null, function () { att.open = att.open === s.id ? null : s.id; paintOpen(); });
-      row.appendChild(el('span', 'no', s.num));
+      row.appendChild(el('span', 'no', s.label));
       var nm = el('span', 'nm', s.name);
       if (s.note) nm.appendChild(el('small', '', s.note));
       row.appendChild(nm);
@@ -2358,7 +2367,7 @@
     function docRow(s) {
       var r = s.rec, need = attNeed(r);
       var row = el('div', 'dz-row');
-      var who = el('span', 'nzw'); who.appendChild(el('i', '', s.num)); who.appendChild(document.createTextNode(s.name));
+      var who = el('span', 'nzw'); who.appendChild(el('i', '', s.label)); who.appendChild(document.createTextNode(s.name));
       row.appendChild(who);
       var w = el('span', 'w', neisWord(r));
       if (r.kind) w.appendChild(el('small', '', r.kind));
@@ -2434,7 +2443,7 @@
         var c = s.rec;
         if (v === '출석') s.rec = null;
         else if (!c) s.rec = { type: v, cat: '', periods: [], reason: '', neis: false, kind: '', docName: '', docs: {}, need: [] };
-        else { c.type = v; if (v !== '조퇴' && v !== '결과') c.periods = []; if (v === '조퇴') c.periods = c.periods.slice(-1); }
+        else { c.type = v; if (v === '결석') c.periods = []; if (v === '조퇴' || v === '지각') c.periods = c.periods.slice(-1); }
         drawEdit(x); save(x);
       }));
       if (r) {
@@ -2457,11 +2466,11 @@
             e.appendChild(none);
           }
         }
-        if (r.type === '조퇴' || r.type === '결과') {
+        if (r.type !== '결석') {
           var per = []; for (var k = 1; k <= d.periods; k++) per.push(k);
-          e.appendChild(chips(r.type === '조퇴' ? '몇 교시부터 조퇴했나요' : '빠진 교시 (여러 개 고를 수 있어요)', per, function (v) { return r.periods.indexOf(v) >= 0; }, function (v) {
+          e.appendChild(chips(r.type === '조퇴' ? '몇 교시부터 조퇴했나요' : r.type === '지각' ? '몇 교시에 늦었나요' : '빠진 교시 (여러 개 고를 수 있어요)', per, function (v) { return r.periods.indexOf(v) >= 0; }, function (v) {
             var c = s.rec;
-            if (c.type === '조퇴') c.periods = c.periods[0] === v ? [] : [v];
+            if (c.type === '조퇴' || c.type === '지각') c.periods = c.periods[0] === v ? [] : [v];
             else { var i = c.periods.indexOf(v); if (i >= 0) c.periods.splice(i, 1); else c.periods.push(v); c.periods.sort(function (a, b) { return a - b; }); }
             drawEdit(x); save(x);
           }, true));
@@ -2505,6 +2514,7 @@
   }
   function drawAttNeis(body, res) {
     body.textContent = '';
+    attNums(res.items);
     var shiftMonth = function (n) { var p = att.month.split('-').map(Number); att.month = ymd(new Date(p[0], p[1] - 1 + n, 1)).slice(0, 7); loadAttNeis(body); };
     var bar = el('div', 'att-bar');
     bar.appendChild(button('mini', '‹', function () { shiftMonth(-1); }));
@@ -2562,6 +2572,7 @@
   }
   function drawAttMonth(body, res) {
     body.textContent = '';
+    attNums(res.students);
     var shiftMonth = function (n) { var p = att.month.split('-').map(Number); var dt = new Date(p[0], p[1] - 1 + n, 1); att.month = ymd(dt).slice(0, 7); loadAttMonth(body); };
     var bar = el('div', 'att-bar');
     bar.appendChild(button('mini', '‹', function () { shiftMonth(-1); }));
@@ -2584,7 +2595,7 @@
     res.types.forEach(function (t) { sums[t] = {}; });
     res.students.forEach(function (s) {
       var tr = el('tr');
-      tr.appendChild(el('td', '', s.num));
+      tr.appendChild(el('td', '', s.label));
       tr.appendChild(el('td', 'name', s.name));
       res.types.forEach(function (t) {
         var n = total(s, t), td = el('td', n ? '' : 'zero', n ? String(n) : '·');
@@ -2611,7 +2622,7 @@
       var head = ['번호', '이름'];
       res.types.forEach(function (t) { cats.forEach(function (c) { head.push(t + ' ' + c); }); });
       var lines = [head.join('\t')].concat(res.students.map(function (s) {
-        var row = [s.num, s.name];
+        var row = [s.label, s.name];
         res.types.forEach(function (t) { cats.forEach(function (c) { row.push(s.counts[t + '|' + c] || 0); }); });
         return row.join('\t');
       }));

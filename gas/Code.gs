@@ -2222,10 +2222,10 @@ function attDate_(v) {
 }
 function dayOf_(date) { const p = date.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2])).getUTCDay(); }
 function periodsOf_(date) { return PERIODS_BY_DAY[dayOf_(date)]; }
-/** 출결은 '학급' 수업에서만. 반 학생 명단(번호순)과 함께 돌려준다. */
+/** 출결: 모든 수업(학급·교과·동아리). 학생 명단(학번순)과 함께 돌려준다. */
 function attCourse_(courseId) {
   const c = activeCourses_().filter(function (x) { return x.id === courseId; })[0];
-  if (!c || c.kind !== 'class') return null;
+  if (!c) return null;
   const notes = {};
   rows_(SHEET.STUDENTS, STUDENT_HEADERS.length).forEach(function (v) { notes[normId_(v[C.ID])] = boardNote_(statusOf_(v)); });
   const roster = rosterOf_(courseId).sort(function (a, b) { return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; });
@@ -2271,7 +2271,7 @@ function apiTeacherAttendDay(token, courseId, date) {
   courseId = String(courseId); date = attDate_(date);
   if (!date) return fail_('날짜를 다시 골라 주세요.');
   const ac = attCourse_(courseId);
-  if (!ac) return fail_('출결은 학급(담임 반)에서만 쓸 수 있습니다.');
+  if (!ac) return fail_('수업을 찾을 수 없습니다.');
   const recs = {}, prev = {}, month = date.slice(0, 7), pending = {}, docsLeft = {}, before = prevSchoolDay_(date);
   attRows_(courseId).mine.forEach(function (m) {
     const v = attView_(m.r);
@@ -2286,7 +2286,7 @@ function apiTeacherAttendDay(token, courseId, date) {
     recs[sid].prevDoc = !!(p && p.cat === '질병' && p.docs[SICK_DOC] === true);
   });
   return { ok: true, date: date, day: dayOf_(date), periods: periodsOf_(date),
-    students: ac.roster.map(function (s) { return { id: s.id, num: s.num, name: s.name, note: s.note, rec: recs[s.id] || null }; }),
+    students: ac.roster.map(function (s) { return { id: s.id, cls: s.cls, num: s.num, name: s.name, note: s.note, rec: recs[s.id] || null }; }),
     pending: Object.keys(pending).sort().map(function (d) { return { date: d, count: pending[d] }; }), // 이번 달 나이스 미입력
     docsLeft: Object.keys(docsLeft).sort().map(function (d) { return { date: d, count: docsLeft[d] }; }) }; // 서류 덜 받은 날
 }
@@ -2297,7 +2297,7 @@ function apiTeacherAttendSave(token, courseId, date, sid, rec) {
   courseId = String(courseId); date = attDate_(date); sid = normId_(sid); rec = rec || {};
   if (!date) return fail_('날짜를 다시 골라 주세요.');
   const ac = attCourse_(courseId);
-  if (!ac) return fail_('출결은 학급(담임 반)에서만 쓸 수 있습니다.');
+  if (!ac) return fail_('수업을 찾을 수 없습니다.');
   const st = ac.roster.filter(function (s) { return s.id === sid; })[0];
   if (!st) return fail_('이 반 학생이 아닙니다.');
   const type = String(rec.type || '');
@@ -2305,8 +2305,8 @@ function apiTeacherAttendSave(token, courseId, date, sid, rec) {
   const cat = ATT_CATS.indexOf(String(rec.cat || '')) >= 0 ? String(rec.cat) : '';
   const max = periodsOf_(date);
   let periods = (Array.isArray(rec.periods) ? rec.periods : []).map(Number).filter(function (n, k, a) { return n >= 1 && n <= max && a.indexOf(n) === k; }).sort(function (a, b) { return a - b; });
-  if (type === '조퇴') periods = periods.slice(-1);           // 조퇴는 떠난 교시 하나
-  if (type !== '조퇴' && type !== '결과') periods = [];
+  if (type === '조퇴' || type === '지각') periods = periods.slice(-1); // 조퇴는 떠난 교시, 지각은 늦은 교시 하나
+  if (type === '결석') periods = [];
   const reason = String(rec.reason || '').replace(/\s+/g, ' ').trim().slice(0, 60);
   const kind = cat === '인정' && ATT_KINDS.indexOf(String(rec.kind || '')) >= 0 ? String(rec.kind) : '';
   const docName = kind === '기타' ? String(rec.docName || '').replace(/\s+/g, ' ').trim().slice(0, 30) : '';
@@ -2373,13 +2373,13 @@ function apiTeacherAttendNeisList(token, courseId, month) {
   courseId = String(courseId); month = String(month || '');
   if (!/^\d{4}-\d{2}$/.test(month)) return fail_('달을 다시 골라 주세요.');
   const ac = attCourse_(courseId);
-  if (!ac) return fail_('출결은 학급(담임 반)에서만 쓸 수 있습니다.');
+  if (!ac) return fail_('수업을 찾을 수 없습니다.');
   const who = {};
   ac.roster.forEach(function (s) { who[s.id] = s; });
   const items = attRows_(courseId).mine.filter(function (m) { return m.date.slice(0, 7) === month && who[m.sid]; })
     .map(function (m) {
       const v = attView_(m.r), s = who[m.sid];
-      v.date = m.date; v.day = dayOf_(m.date); v.id = s.id; v.num = s.num; v.name = s.name;
+      v.date = m.date; v.day = dayOf_(m.date); v.id = s.id; v.num = s.num; v.name = s.name; v.cls = s.cls;
       return v;
     })
     .sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0; });
@@ -2392,7 +2392,7 @@ function apiTeacherAttendMonth(token, courseId, month) {
   courseId = String(courseId); month = String(month || '');
   if (!/^\d{4}-\d{2}$/.test(month)) return fail_('달을 다시 골라 주세요.');
   const ac = attCourse_(courseId);
-  if (!ac) return fail_('출결은 학급(담임 반)에서만 쓸 수 있습니다.');
+  if (!ac) return fail_('수업을 찾을 수 없습니다.');
   const by = {}, pending = {};
   ac.roster.forEach(function (s) { by[s.id] = {}; });
   attRows_(courseId).mine.forEach(function (m) {
@@ -2402,7 +2402,7 @@ function apiTeacherAttendMonth(token, courseId, month) {
     if (!v.neis) pending[m.date] = (pending[m.date] || 0) + 1;
   });
   return { ok: true, month: month, types: ATT_TYPES, cats: ATT_CATS.concat(['미정']),
-    students: ac.roster.map(function (s) { return { id: s.id, num: s.num, name: s.name, note: s.note, counts: by[s.id] }; }),
+    students: ac.roster.map(function (s) { return { id: s.id, cls: s.cls, num: s.num, name: s.name, note: s.note, counts: by[s.id] }; }),
     pending: Object.keys(pending).sort().map(function (d) { return { date: d, count: pending[d] }; }) };
 }
 

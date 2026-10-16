@@ -1,10 +1,10 @@
 {
-  "version": "20261016.1135",
-  "note": "설문: 다른 수업에 복사",
+  "version": "20261016.1204",
+  "note": "출결: 모든 수업에 탭, 지각 교시 선택",
   "files": [
     {
       "name": "Code.gs",
-      "sha256": "faf2c2d52175c0017f7a05ca1005590b6d5c8d4e36d8c4f0cdaef24a5d29abb3"
+      "sha256": "bc620fc44ad17edeccc2231dac1416234b411f173c08a6cbf06f141decd2dbd7"
     },
     {
       "name": "Demo.gs",
@@ -12,7 +12,7 @@
     },
     {
       "name": "Index.html",
-      "sha256": "ab404958c0a3dd615db9bf8c22dd102fc5de5a1e9d134ebbe2223291bca24f85"
+      "sha256": "6eb5587fd9e6243011ae33643aec2994b82908da00db20e2e5b4435895a3f71d"
     },
     {
       "name": "Setup.html",
