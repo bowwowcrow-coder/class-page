@@ -406,6 +406,19 @@
   .nz-date button { height: 28px; padding: 0 10px; border: 0; border-radius: 14px; background: var(--fill); font: inherit; font-size: 13px; color: var(--ink); cursor: pointer; }
   .nz-filter { display: flex; gap: 6px; margin: 4px 0 2px; }
   .nz-filter .ac { height: 32px; font-size: 14px; }
+  /* 체크 과제 */
+  .ck-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 10px 14px; }
+  .ck-row + .ck-row { border-top: 1px solid var(--line); }
+  .ck-row .nzw { flex: none; width: 124px; overflow: hidden; font-size: 15px; white-space: nowrap; text-overflow: ellipsis; }
+  .ck-row .nzw i { display: inline-block; width: 26px; font-style: normal; color: var(--sub); font-variant-numeric: tabular-nums; }
+  .ck-row .nzw small { margin-left: 4px; font-size: 12px; color: var(--sub); }
+  .ck-row .cnt { flex: none; width: 34px; font-size: 13px; color: var(--sub); text-align: right; font-variant-numeric: tabular-nums; order: 3; }
+  .ck-row .cnt.full { color: var(--accent-ink, var(--accent)); font-weight: 700; }
+  .ck-items { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+  .ck-mine { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .ck-mine span { padding: 5px 11px; border-radius: 14px; background: var(--fill); font-size: 14px; color: var(--sub); }
+  .ck-mine span.on { background: var(--accent); color: #fff; font-weight: 600; }
+  @media (max-width: 599px) { .ck-items { order: 4; flex-basis: 100%; padding-left: 26px; } .ck-row .nzw { flex: 1; width: auto; } }
   /* 서류 확인 */
   .dz-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 10px 14px; }
   .dz-row + .dz-row { border-top: 1px solid var(--line); }
@@ -1043,6 +1056,7 @@
     upcoming.forEach(function (t) {
       var row = button('row', null, function () { go(t.course, 'tasks'); });
       if (t.slots.length) row.appendChild(el('span', 'dot lv-' + (t.mine ? level(t.mine.state, t.mine.lateDays) : 'n')));
+      else if (t.checks && t.checks.length) row.appendChild(el('span', 'dot lv-' + (t.myChecks.length === t.checks.length ? '0' : 'n')));
       var text = el('div', 'row-text');
       var name = el('div', 'row-title');
       if (t.graded) name.appendChild(el('span', 'tag', '평가'));
@@ -1584,6 +1598,13 @@
     }
     if (t.result) card.appendChild(resultBox(t));
     if (t.memo) card.appendChild(noteBox('선생님 메모', t.memo));
+    if (t.checks && t.checks.length) {
+      // 실물로 낸 것: 선생님이 확인한 항목만 채워진다
+      card.appendChild(el('p', 'hint', '선생님 확인 ' + t.myChecks.length + ' / ' + t.checks.length));
+      var ck = el('div', 'ck-mine');
+      t.checks.forEach(function (c) { var on = t.myChecks.indexOf(c) >= 0; ck.appendChild(el('span', on ? 'on' : '', (on ? '✓ ' : '') + c)); });
+      card.appendChild(ck);
+    }
     if (!t.slots.length) return card;
     if (t.alt) card.appendChild(noteBox('대체과제', '이 과제는 대체과제로 제출합니다.\n파일 형식과 개수에 제한이 없습니다.'));
 
@@ -2030,6 +2051,7 @@
     tasks.forEach(function (t) {
       var chip = button('', null, function () { tTask = t.id; drawTeacher(); });
       if (t.graded) chip.appendChild(el('span', 'tag', '평가'));
+      if (t.checks && t.checks.length) chip.appendChild(el('span', 'tag', '체크'));
       chip.appendChild(document.createTextNode(t.title + (t.published ? '' : ' (미게시)')));
       chip.setAttribute('aria-current', t.id === tTask ? 'true' : 'false');
       chips.appendChild(chip);
@@ -2139,6 +2161,10 @@
       if (!slots.length) slotBox.appendChild(el('p', 'hint', '아무것도 고르지 않으면 안내만 보이고 제출은 받지 않습니다.'));
     }
     drawSlots();
+    // 체크 항목: 실물로 받은 것을 선생님이 항목마다 표시 (학생은 올리지 않는다)
+    var checks = textBox(t && t.checks ? t.checks.join(', ') : '', 300, '예: 토끼, 시계, 쿠키');
+    wrap.appendChild(field('체크 항목 (선택, 쉼표로)', checks));
+    wrap.appendChild(el('p', 'hint', '실물이나 수업 중에 낸 것을 선생님이 학생마다 체크합니다.\n체크만 할 과제라면 위의 제출 형식은 모두 끄세요.'));
     if (locked) wrap.appendChild(el('p', 'hint', '제출한 학생이 있어 형식과 칸 이름은 고정됩니다.\n개수만 고칠 수 있습니다.'));
 
     var msg = el('p', 'msg', '');
@@ -2154,6 +2180,7 @@
         id: t ? t.id : '', title: title.value, desc: desc.value,
         dueAt: new Date(due.value).getTime(), finAt: fin.value ? new Date(fin.value).getTime() : 0,
         graded: graded.isOn(), scale: scale.value, published: published.isOn(),
+        checks: checks.value.split(/[,，\n]/).map(function (x) { return x.trim(); }).filter(Boolean),
         // 학생 화면에 글 → 이미지 → 문서 → 파일 순서로 나오게 정리 (제출이 있는 과제는 순서를 건드리지 않는다)
         slots: locked ? slots : slots.slice().sort(function (a, b) { var at = function (s) { for (var i = 0; i < SLOT_KINDS.length; i++) if (SLOT_KINDS[i][0] === s.kind) return i; return 9; }; return at(a) - at(b); })
       }).then(function (res) {
@@ -3407,6 +3434,7 @@
       box.appendChild(toggles);
     }
 
+    if (task.checks && task.checks.length) return drawChecks(task, box);
     var done = roster.filter(function (s) { return s.state !== 'none'; }).length;
     var summary = el('div', 'summary');
     var count = el('div');
@@ -3466,6 +3494,67 @@
         tiles.appendChild(tile);
       });
       box.appendChild(tiles);
+    });
+  }
+
+  /* 체크 과제: 학생마다 항목 칩을 눌러 '냈음' 표시. 누르는 즉시 저장 */
+  function drawChecks(task, box) {
+    var items = task.checks, full = function (s) { return s.checks.length === items.length; };
+    var summary = el('div', 'summary');
+    var count = el('div');
+    var strong = el('strong', '');
+    count.appendChild(strong);
+    count.appendChild(el('span', '', ' / 전체 ' + roster.length + '명'));
+    summary.appendChild(count);
+    var tools = el('div', 'tools');
+    tools.appendChild(button('', '과제 설정', function () { openTaskForm(task); }));
+    tools.appendChild(button('', '새로고침', loadRoster));
+    summary.appendChild(tools);
+    box.appendChild(summary);
+    var paintCount = function () { strong.textContent = '모두 낸 학생 ' + roster.filter(full).length + '명'; };
+    paintCount();
+    box.appendChild(el('p', 'hint', '항목을 누르면 바로 저장됩니다. 다시 누르면 취소돼요. (' + items.join(' · ') + ')'));
+    // 항목별로 한 번에: 낸 사람 수
+    var per = el('p', 'hint');
+    box.appendChild(per);
+    var paintPer = function () { per.textContent = items.map(function (c) { return c + ' ' + roster.filter(function (s) { return s.checks.indexOf(c) >= 0; }).length; }).join(' · '); };
+    paintPer();
+    var order = [], groups = {};
+    roster.forEach(function (s) {
+      var key = s.grade + '학년 ' + s.cls + '반';
+      if (!groups[key]) { groups[key] = []; order.push(key); }
+      groups[key].push(s);
+    });
+    order.forEach(function (key) {
+      box.appendChild(el('h3', 'group-title', key));
+      var list = el('div', 'list');
+      groups[key].forEach(function (s) {
+        var row = el('div', 'ck-row');
+        var who = el('span', 'nzw'); who.appendChild(el('i', '', s.num)); who.appendChild(document.createTextNode(s.name));
+        if (s.note) who.appendChild(el('small', '', s.note));
+        row.appendChild(who);
+        var cnt = el('span', 'cnt');
+        var paintRow = function () { cnt.textContent = s.checks.length + '/' + items.length; cnt.classList.toggle('full', full(s)); };
+        var box2 = el('div', 'ck-items');
+        items.forEach(function (c) {
+          var b = button('dc', null, function () {
+            var on = s.checks.indexOf(c) < 0;
+            var before = s.checks.slice();
+            s.checks = on ? items.filter(function (x) { return x === c || s.checks.indexOf(x) >= 0; }) : s.checks.filter(function (x) { return x !== c; });
+            paint(); paintRow(); paintCount(); paintPer();
+            s.q = (s.q || Promise.resolve()).then(function () { return call('apiTeacherCheck', ttoken, task.id, s.id, c, on); })
+              .then(must).catch(function (err) { s.checks = before; paint(); paintRow(); paintCount(); paintPer(); if (err && err.message !== 'expired') alertSheet(friendly(err)); });
+          });
+          var paint = function () { var on = s.checks.indexOf(c) >= 0; b.textContent = (on ? '✓ ' : '') + c; b.setAttribute('aria-pressed', on ? 'true' : 'false'); };
+          paint();
+          box2.appendChild(b);
+        });
+        row.appendChild(box2);
+        row.appendChild(cnt);
+        paintRow();
+        list.appendChild(row);
+      });
+      box.appendChild(list);
     });
   }
 

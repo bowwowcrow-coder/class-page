@@ -40,7 +40,7 @@ function fillDemoData() {
   const at = function (days) { return new Date(now + days * DAY); };
 
   // 1) 기록 비우기
-  [SHEET.COURSES, SHEET.STUDENTS, SHEET.NOTICES, SHEET.REFS, SHEET.TASKS, SHEET.SUBS, SHEET.GRADES, SHEET.ALLOW, SHEET.LOG, SHEET.SURVEYS, SHEET.ANSWERS, SHEET.MEMES, SHEET.ATTEND].forEach(function (name) {
+  [SHEET.COURSES, SHEET.STUDENTS, SHEET.NOTICES, SHEET.REFS, SHEET.TASKS, SHEET.SUBS, SHEET.GRADES, SHEET.ALLOW, SHEET.LOG, SHEET.SURVEYS, SHEET.ANSWERS, SHEET.MEMES, SHEET.ATTEND, SHEET.CHECKS].forEach(function (name) {
     const sh = sheet_(name);
     if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, sh.getMaxColumns()).clearContent();
   });
@@ -144,7 +144,7 @@ function makeBlankTemplate() {
     return;
   }
   setup();
-  [SHEET.COURSES, SHEET.STUDENTS, SHEET.NOTICES, SHEET.REFS, SHEET.TASKS, SHEET.SUBS, SHEET.GRADES, SHEET.ALLOW, SHEET.LOG, SHEET.SURVEYS, SHEET.ANSWERS, SHEET.MEMES, SHEET.ATTEND].forEach(function (name) {
+  [SHEET.COURSES, SHEET.STUDENTS, SHEET.NOTICES, SHEET.REFS, SHEET.TASKS, SHEET.SUBS, SHEET.GRADES, SHEET.ALLOW, SHEET.LOG, SHEET.SURVEYS, SHEET.ANSWERS, SHEET.MEMES, SHEET.ATTEND, SHEET.CHECKS].forEach(function (name) {
     const sh = sheet_(name);
     if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, sh.getMaxColumns()).clearContent();
   });

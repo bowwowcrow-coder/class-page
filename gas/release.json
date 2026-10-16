@@ -1,18 +1,18 @@
 {
-  "version": "20261016.0747",
-  "note": "동아리(셰이프·매터) 추가",
+  "version": "20261016.1100",
+  "note": "체크 과제(실물 제출 확인) + 제품디자인 작품 제출 확인",
   "files": [
     {
       "name": "Code.gs",
-      "sha256": "ea4f233522f7ebb85829470b06a40127dfef02593189a79573da741b221b9c87"
+      "sha256": "faf2c2d52175c0017f7a05ca1005590b6d5c8d4e36d8c4f0cdaef24a5d29abb3"
     },
     {
       "name": "Demo.gs",
-      "sha256": "f008d3c9775b14a896eb8a46c9a8bd140812db8bba76e078b31c1aaa3d4baaba"
+      "sha256": "55499dee969fd38937bdfdbe03cb0dbd03388ec6fbf057c8b18eec20a32a9946"
     },
     {
       "name": "Index.html",
-      "sha256": "7fd9cff711e6bed806e996485402b0ff3ee76cde5abcca38fd15dc7cf7811c31"
+      "sha256": "e6a7c73b91fb93a64abc43856b32d7d9267a74b1d6f1b198a26cc790ee380286"
     },
     {
       "name": "Setup.html",

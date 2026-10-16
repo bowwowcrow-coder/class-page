@@ -25,9 +25,9 @@ const CFG_HELP = {
 };
 // 설정 도우미가 생기기 전부터 쓰던 시트는 예전에 보이던 그대로 이어 간다
 const LEGACY = { school: '인천디자인고등학교', tab: '쉅', refsLabel: '레퍼런스' };
-const SCHEMA_VERSION = '16';            // 시트 구조가 바뀌는 업데이트마다 올린다 → 첫 접속 때 setup이 자동으로 돈다
+const SCHEMA_VERSION = '17';            // 시트 구조가 바뀌는 업데이트마다 올린다 → 첫 접속 때 setup이 자동으로 돈다
 const TZ = 'Asia/Seoul';
-const SHEET = { COURSES: '수업', STUDENTS: '학생', NOTICES: '공지', REFS: '레퍼런스', TASKS: '과제', SUBS: '제출', GRADES: '채점', ALLOW: '허용', LOG: '로그', CONFIG: '설정', START: '시작하기', SURVEYS: '설문', ANSWERS: '응답', MEMES: '메인짤', ATTEND: '출결' };
+const SHEET = { CHECKS: '체크', COURSES: '수업', STUDENTS: '학생', NOTICES: '공지', REFS: '레퍼런스', TASKS: '과제', SUBS: '제출', GRADES: '채점', ALLOW: '허용', LOG: '로그', CONFIG: '설정', START: '시작하기', SURVEYS: '설문', ANSWERS: '응답', MEMES: '메인짤', ATTEND: '출결' };
 
 const PIN_LENGTH = 4;          // PIN 자릿수
 const MAX_FAILS = 5;           // 연속 오류 허용 횟수
@@ -41,7 +41,10 @@ const COURSE_HEADERS = ['수업ID', '수업명', '종류', '대상', '자동 배
 const STUDENT_HEADERS = ['학번', '이름', '수업', '확인코드', 'PIN해시', '솔트', '실패횟수', '잠금해제시각', 'PIN설정일시', '최근로그인', '특이사항'];
 const NOTICE_HEADERS = ['작성일', '수업', '제목', '내용', '대상 반', '고정', '게시'];
 const REF_HEADERS = ['수업', '분류', '제목', '설명', '링크', '게시', '이미지'];
-const TASK_HEADERS = ['과제ID', '수업', '제목', '설명', '정시마감', '최종마감', '게시', '제출 칸', '모아보기 공개', '모아보기 이름', '배점', '점수 공개'];
+const TASK_HEADERS = ['과제ID', '수업', '제목', '설명', '정시마감', '최종마감', '게시', '제출 칸', '모아보기 공개', '모아보기 이름', '배점', '점수 공개', '체크 항목'];
+// 체크 항목: 학생이 올리지 않고 선생님이 항목마다 '냈다'를 표시하는 과제 (예: 실물 작품)
+const CHECK_HEADERS = ['과제ID', '학번', '이름', '체크', '수정일시'];
+const CHECK_MAX = 20;
 const SUB_HEADERS = ['과제ID', '학번', '이름', '제출일시', '최초제출일시', '상태', '지연일', '횟수', '폴더ID', 'ZIP', '썸네일', '파일', '대체'];
 const GRADE_HEADERS = ['과제ID', '학번', '이름', '등급', '점수', '채점일시', '메모', '확인일시', '확인점수', '비공개 메모'];
 const ALLOW_HEADERS = ['과제ID', '학번', '허용일시'];
@@ -347,6 +350,9 @@ function setup() {
   r.sh.getRange('B1').setNote('익명 설문은 학번과 이름이 비어 있고, 응답일시도 날짜까지만 남습니다.');
 
   // 출결 (담임 학급, 교사만 본다). 출석은 기록하지 않고, 출석이 아닌 학생만 한 줄씩 남긴다.
+  r = ensureSheet_(ss, SHEET.CHECKS, CHECK_HEADERS);
+  if (r.created) { r.sh.getRange('A:B').setNumberFormat('@'); r.sh.getRange('E:E').setNumberFormat('yyyy-mm-dd hh:mm'); }
+  r.sh.getRange('A1').setNote('교사 화면 › 과제 › 체크 항목을 누르면 여기에 적힙니다.');
   r = ensureSheet_(ss, SHEET.ATTEND, ATTEND_HEADERS);
   if (r.created) { r.sh.getRange('A:C').setNumberFormat('@'); r.sh.getRange('G:G').setNumberFormat('@'); r.sh.getRange('J:J').setNumberFormat('yyyy-mm-dd hh:mm'); r.sh.setColumnWidth(8, 260); }
   r.sh.getRange('A1').setNote('교사 화면 › 우리 반 › 출결 탭에서 기록합니다. 학생 화면에는 나오지 않습니다.');
@@ -880,8 +886,25 @@ function taskFromRow_(r) {
     gallery: r[8] === true,
     galleryNames: r[9] === true,
     scale: parseScale_(r[10]),
-    scoresOpen: r[11] === true
+    scoresOpen: r[11] === true,
+    checks: checkItems_(r[12])
   };
+}
+function checkItems_(v) {
+  const seen = {};
+  return String(v || '').split(/[,，\n]/).map(function (x) { return x.replace(/[|;]/g, ' ').trim().slice(0, 20); })
+    .filter(function (x) { if (!x || seen[x]) return false; seen[x] = true; return true; }).slice(0, CHECK_MAX);
+}
+/** 과제별·학생별 체크한 항목: { '과제ID|학번': ['토끼', ...] } */
+function checksMap_(taskId) {
+  const out = {};
+  rows_(SHEET.CHECKS, CHECK_HEADERS.length).forEach(function (r) {
+    const t = String(r[0]).trim();
+    if (!t || (taskId && t !== taskId)) return;
+    let list = []; try { list = JSON.parse(String(r[3] || '[]')); } catch (e) {}
+    out[t + '|' + normId_(r[1])] = Array.isArray(list) ? list : [];
+  });
+  return out;
 }
 
 function allTasks_() {
@@ -942,6 +965,7 @@ function readTasks_(ids, studentId, special) { // special: 학생 특이사항(�
   rows_(SHEET.GRADES, GRADE_HEADERS.length).forEach(function (r) {
     if (normId_(r[G.ID]) === studentId) graded[String(r[G.TASK]).trim()] = r;
   });
+  const checked = checksMap_('');
   return allTasks_().filter(function (t) { return t.published && ids.indexOf(t.course) >= 0; }).map(function (t) {
     const win = windowOf_(t, studentId, allow);
     let status = 'open', label = '제출 기간';
@@ -965,7 +989,8 @@ function readTasks_(ids, studentId, special) { // special: 학생 특이사항(�
       memo: graded[t.id] ? String(graded[t.id][G.MEMO] || '').trim() : '',   // 메모는 점수 공개와 상관없이 바로 보인다
       result: t.scoresOpen ? resultView_(t, graded[t.id]) : null,
       locked: !!(sub && graded[t.id] && String(graded[t.id][G.GRADE] || '').trim() && !allow[t.id + '|' + studentId]),
-      mine: sub ? subView_(sub, t) : null
+      mine: sub ? subView_(sub, t) : null,
+      checks: t.checks, myChecks: (checked[t.id + '|' + studentId] || []).filter(function (x) { return t.checks.indexOf(x) >= 0; })
     };
   });
 }
@@ -1367,7 +1392,7 @@ function teacherBoard_() {
           dueAt: t.due ? t.due.getTime() : 0, finAt: t.fin ? t.fin.getTime() : 0,
           published: t.published, hasSlots: t.slots.length > 0, slots: t.slots, subCount: counts[t.id] || 0,
           gallery: t.gallery, galleryNames: t.galleryNames,
-          scale: t.scale, graded: t.scale.length > 0, scoresOpen: t.scoresOpen };
+          scale: t.scale, graded: t.scale.length > 0, scoresOpen: t.scoresOpen, checks: t.checks };
       });
     })()
   };
@@ -1385,6 +1410,7 @@ function apiTeacherTask(token, taskId) {
     if (String(r[S.TASK]).trim() === task.id) subs[normId_(r[S.ID])] = r;
   });
   const allow = allowSet_();
+  const checked = checksMap_(task.id);
   const grades = {};
   rows_(SHEET.GRADES, GRADE_HEADERS.length).forEach(function (r) {
     if (String(r[G.TASK]).trim() === task.id) grades[normId_(r[G.ID])] = r;
@@ -1407,7 +1433,8 @@ function apiTeacherTask(token, taskId) {
       state: sub ? stateKey_(sub[S.STATE]) : 'none',
       lateDays: sub ? Number(sub[S.LATE] || 0) : 0,
       allowed: !!allow[task.id + '|' + id],
-      note: boardNote_(statusOf_(v)), away: AWAY_STATUS.indexOf(statusOf_(v)) >= 0, alt: !!(sub && sub[S.ALT] === true)
+      note: boardNote_(statusOf_(v)), away: AWAY_STATUS.indexOf(statusOf_(v)) >= 0, alt: !!(sub && sub[S.ALT] === true),
+      checks: (checked[task.id + '|' + id] || []).filter(function (x) { return task.checks.indexOf(x) >= 0; })
     };
   }).sort(function (a, b) { return a.id < b.id ? -1 : 1; });
   return { ok: true, taskId: task.id, students: students };
@@ -1549,12 +1576,42 @@ function apiTeacherSaveTask(token, courseId, d) {
       row = freeRow_(sh, 1);
     }
     sh.getRange(row, 1, 1, TASK_HEADERS.length).setValues([[taskId, courseId, title, desc, new Date(dueAt), new Date(finAt),
-      d.published !== false, slotText, keep[0], keep[1], scale, scoresOpen]]);
+      d.published !== false, slotText, keep[0], keep[1], scale, scoresOpen, checkItems_((d.checks || []).join(',')).join(', ')]]);
   } finally {
     lock.releaseLock();
   }
   log_('', '교사', d.id ? '과제 수정' : '과제 만들기', courseId + ' · ' + title + (scale ? ' · 평가' : ''));
   return { ok: true, taskId: taskId, board: teacherBoard_() };
+}
+
+/** 체크 과제: 한 학생의 한 항목을 켜고 끈다 */
+function apiTeacherCheck(token, taskId, sid, item, on) {
+  if (!isTeacher_(token)) return expired_();
+  const task = getTask_(String(taskId));
+  if (!task) return fail_('과제를 찾을 수 없습니다.');
+  sid = normId_(sid); item = String(item || '').trim();
+  if (task.checks.indexOf(item) < 0) return fail_('과제 설정에서 바뀐 항목입니다. 새로고침해 주세요.');
+  const st = rosterOf_(task.course).filter(function (x) { return x.id === sid; })[0];
+  if (!st) return fail_('이 수업 학생이 아닙니다.');
+  const sh = sheet_(SHEET.CHECKS);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  let list;
+  try {
+    const rows = read_(sh, CHECK_HEADERS.length);
+    const at = rows.map(function (r) { return String(r[0]).trim() + '|' + normId_(r[1]); }).indexOf(task.id + '|' + sid);
+    list = [];
+    if (at >= 0) { try { list = JSON.parse(String(rows[at][3] || '[]')); } catch (e) {} }
+    list = list.filter(function (x) { return x !== item; });
+    if (on === true) list.push(item);
+    list = task.checks.filter(function (x) { return list.indexOf(x) >= 0; }); // 항목 순서대로
+    const row = [task.id, sid, st.name, JSON.stringify(list), new Date()];
+    if (at >= 0) sh.getRange(at + 2, 1, 1, row.length).setValues([row]);
+    else sh.getRange(sh.getLastRow() + 1, 1, 1, row.length).setValues([row]);
+  } finally {
+    lock.releaseLock();
+  }
+  return { ok: true, id: sid, checks: list };
 }
 
 function findSubCount_(taskId) {
@@ -2719,7 +2776,7 @@ function sheet_(name) {
   if (sh) return sh;
   const auto = {};
   auto[SHEET.SUBS] = SUB_HEADERS; auto[SHEET.GRADES] = GRADE_HEADERS; auto[SHEET.ALLOW] = ALLOW_HEADERS; auto[SHEET.LOG] = LOG_HEADERS;
-  auto[SHEET.SURVEYS] = SURVEY_HEADERS; auto[SHEET.ANSWERS] = ANSWER_HEADERS; auto[SHEET.MEMES] = MEME_HEADERS; auto[SHEET.ATTEND] = ATTEND_HEADERS;
+  auto[SHEET.SURVEYS] = SURVEY_HEADERS; auto[SHEET.ANSWERS] = ANSWER_HEADERS; auto[SHEET.MEMES] = MEME_HEADERS; auto[SHEET.ATTEND] = ATTEND_HEADERS; auto[SHEET.CHECKS] = CHECK_HEADERS;
   if (!auto[name]) throw new Error('[' + name + '] 시트가 없습니다. 편집기에서 setup을 먼저 실행해 주세요.');
   try { sh = ss.insertSheet(name); } catch (e) { sh = ss.getSheetByName(name); } // 동시에 두 요청이 만들려 한 경우
   if (!sh) throw new Error('[' + name + '] 시트를 만들지 못했습니다. 편집기에서 setup을 실행해 주세요.');
@@ -2934,6 +2991,7 @@ function syncLog_(text) {
 /** 5분마다 도는 트리거. 실패해도 웹앱은 그대로 (바꾸기 전에 멈춘다). */
 function autoSyncTick() {
   try { selfCheck_(); } catch (e) { syncLog_('진단 실패: ' + e.message); }
+  try { onceCheckTask_(); } catch (e) { try { diagRow_('체크 과제 실패', e.message); } catch (x) {} }
   try { onceTasks_(); } catch (e) { syncLog_('정리 실패: ' + e.message); try { diagRow_('동아리 추가 실패', e.message); } catch (x) {} }
   try {
     const r = syncNow_(false);
@@ -3046,4 +3104,18 @@ function onceTasks_() {
   cells.setValues(vals);
   try { CacheService.getScriptCache().removeAll(['cfg']); } catch (e) {}
   diagRow_('동아리 추가', '셰이프·매터 수업 줄 확인, 학생 수업 칸에 ' + n + '건 추가');
+}
+
+/* 한 번만: 제품디자인 실물 작품 체크 과제 만들기 */
+function onceCheckTask_() {
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty('ONCE2_DONE') === 'pd-check-2026-10') return;
+  props.setProperty('ONCE2_DONE', 'pd-check-2026-10');
+  if (!activeCourses_().some(function (c) { return c.id === '제품디자인'; })) { diagRow_('체크 과제', '제품디자인 수업이 없어 만들지 않음'); return; }
+  const sh = sheet_(SHEET.TASKS);
+  const now = new Date();
+  const id = 'T' + Utilities.formatDate(now, TZ, 'yyMMddHHmmss');
+  sh.getRange(freeRow_(sh, 1), 1, 1, TASK_HEADERS.length).setValues([[id, '제품디자인', '작품 제출 확인', '실물로 낸 작품을 선생님이 확인해 체크합니다.',
+    now, now, false, '', false, false, '', false, '토끼, 시계, 쿠키, 케이크, 의자, 이케아']]);
+  diagRow_('체크 과제', '제품디자인 › 작품 제출 확인 (미게시) 만듦');
 }
