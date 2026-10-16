@@ -2831,6 +2831,7 @@
     summary.appendChild(count);
     var tools = el('div', 'tools');
     if (meta) tools.appendChild(button('', '설정', function () { openSurveyForm(meta); }));
+    if (meta) tools.appendChild(button('', '다른 수업에 복사', function () { openSurveyCopy(meta); }));
     tools.appendChild(button('', '새로고침', function () { loadSurveyResult(sv.id); }));
     summary.appendChild(tools);
     card.appendChild(summary);
@@ -2886,6 +2887,45 @@
 
   var Q_TYPES = [['one', '하나 고르기'], ['many', '여러 개 고르기'], ['text', '주관식']];
   var Q_SCALE = ['매우 그렇다', '그렇다', '보통이다', '그렇지 않다', '전혀 그렇지 않다'];
+  /* 설문을 다른 수업에도 그대로 만든다 (응답은 따로 받는다) */
+  function openSurveyCopy(sv) {
+    var wrap = el('div');
+    wrap.appendChild(el('h3', '', '다른 수업에 복사'));
+    wrap.appendChild(el('p', 'hint', '"' + sv.title + '"을 고른 수업에 똑같이 만듭니다.\n문항·익명·마감이 그대로 들어가고, 응답은 수업마다 따로 모입니다.'));
+    var picked = {};
+    var list = el('div', 'acs');
+    board.courses.filter(function (c) { return c.id !== tCourse; }).forEach(function (c) {
+      var b = button('dc', c.name, function () { picked[c.id] = !picked[c.id]; b.setAttribute('aria-pressed', picked[c.id] ? 'true' : 'false'); });
+      b.setAttribute('aria-pressed', 'false');
+      list.appendChild(b);
+    });
+    wrap.appendChild(list);
+    var toggles = el('div', 'list toggles');
+    toggles.style.marginTop = '16px';
+    var pub = toggleRow('바로 게시', '끄면 복사만 해 두고 학생에게는 안 보입니다.', sv.published !== false);
+    toggles.appendChild(pub);
+    wrap.appendChild(toggles);
+    var msg = el('p', 'msg', '');
+    wrap.appendChild(msg);
+    var pair = el('div', 'pair');
+    pair.appendChild(button('btn quiet', '취소', closeSheet));
+    var ok = button('btn', '복사', function () {
+      var ids = Object.keys(picked).filter(function (k) { return picked[k]; });
+      if (!ids.length) { msg.textContent = '복사할 수업을 골라 주세요.'; return; }
+      ok.disabled = true; msg.textContent = '복사하는 중';
+      var data = { id: '', title: sv.title, desc: sv.desc, anon: sv.anon, qs: sv.qs, open: sv.open !== false, dueAt: sv.dueAt || 0, published: pub.isOn() };
+      ids.reduce(function (p, id) { return p.then(function () { return call('apiTeacherSaveSurvey', ttoken, id, data).then(must); }); }, Promise.resolve())
+        .then(function () {
+          var names = ids.map(function (id) { return courseById(board.courses, id).name; }).join(', ');
+          closeSheet();
+          alertSheet(names + '에 복사했어요.' + (pub.isOn() ? '' : '\n아직 게시하지 않았으니 그 수업의 설문 탭에서 켜 주세요.'));
+        })
+        .catch(function (err) { ok.disabled = false; if (err && err.message !== 'expired') msg.textContent = friendly(err); });
+    });
+    pair.appendChild(ok);
+    wrap.appendChild(pair);
+    openSheet(wrap);
+  }
   function openSurveyForm(sv) {
     var locked = !!(sv && sv.count > 0); // 응답이 들어온 뒤에는 문항과 익명 여부를 바꾸지 않는다
     var wrap = el('div');

@@ -1,6 +1,6 @@
 {
-  "version": "20261016.1100",
-  "note": "체크 과제(실물 제출 확인) + 제품디자인 작품 제출 확인",
+  "version": "20261016.1135",
+  "note": "설문: 다른 수업에 복사",
   "files": [
     {
       "name": "Code.gs",
@@ -12,7 +12,7 @@
     },
     {
       "name": "Index.html",
-      "sha256": "e6a7c73b91fb93a64abc43856b32d7d9267a74b1d6f1b198a26cc790ee380286"
+      "sha256": "ab404958c0a3dd615db9bf8c22dd102fc5de5a1e9d134ebbe2223291bca24f85"
     },
     {
       "name": "Setup.html",
