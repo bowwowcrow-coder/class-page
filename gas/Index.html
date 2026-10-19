@@ -484,6 +484,23 @@
   .dc { height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); font: inherit; font-size: 14px; color: var(--ink); cursor: pointer; }
   .dc[aria-pressed="true"] { border-color: var(--accent); background: var(--accent); color: #fff; font-weight: 600; }
   .dc.sub { border-style: dashed; color: var(--sub); }
+  .dc.photo { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .att-photo img { display: block; width: 100%; max-height: 70vh; object-fit: contain; border-radius: 10px; background: var(--bg); }
+  .myatt { margin-bottom: 8px; }
+  .att-card h3 { margin-bottom: 10px; }
+  .att-docs { display: grid; gap: 8px; }
+  .att-doc { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; }
+  .att-doc strong { flex: none; }
+  .att-doc .st { flex: 1; min-width: 0; font-size: 13px; color: var(--sub); }
+  .att-doc.sent .st { color: var(--accent); }
+  .att-doc.got { background: var(--bg); }
+  .att-doc.got .st { color: #1f9d55; font-weight: 600; }
+  .att-doc .btn.sm { flex: none; width: auto; height: 34px; min-height: 0; margin: 0; padding: 0 14px; font-size: 14px; }
+  .att-past { display: grid; gap: 0; margin-top: 8px; border-top: 1px solid var(--line); }
+  .att-row { display: flex; gap: 10px; padding: 10px 2px; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .att-row .d { flex: none; width: 84px; color: var(--sub); }
+  .att-row .w { flex: 1; min-width: 0; }
+  .att-row .st { flex: none; color: #1f9d55; font-size: 13px; }
   .dz-none { font-size: 13px; color: var(--sub); }
   .dz-row.done { opacity: .45; }
   @media (max-width: 599px) { .dz-docs { width: 100%; padding-left: 32px; } }
@@ -774,7 +791,7 @@
   }
   var TAB_NAMES = {
     course: { notices: '공지', refs: REFS, tasks: '과제', surveys: '설문' },
-    'class': { notices: '공지', refs: '자료', tasks: '제출', surveys: '설문', trip: '체험학습' },
+    'class': { notices: '공지', refs: '자료', tasks: '제출', surveys: '설문', trip: '출결' },
     club: { notices: '공지', refs: '자료', tasks: '과제', surveys: '설문' }
   };
   var LEVEL_TEXT = { n: '미제출', '0': '정시', '1': '지각 1~3일', '2': '지각 4~7일', '3': '지각 8일 이상', x: '마감 후 허용' };
@@ -979,7 +996,7 @@
 
   function enter(res) {
     if (!res.ok) return res;
-    token = res.token; trip.data = null; trip.view = 'list';
+    token = res.token; trip.data = null; trip.view = 'list'; myAtt = null;
     keep(sessionStorage, TOKEN_KEY, token);
     clearSecrets();
     start(res.home);
@@ -988,7 +1005,7 @@
 
   function signOut(message) {
     var old = token || ttoken;
-    token = null; ttoken = null; trip.data = null; trip.view = 'list'; trip.edit = null;
+    token = null; ttoken = null; trip.data = null; trip.view = 'list'; trip.edit = null; myAtt = null;
     keep(sessionStorage, TOKEN_KEY, null);
     keep(sessionStorage, TTOKEN_KEY, null);
     if (old) call('apiLogout', old).catch(function () {});
@@ -2341,6 +2358,75 @@
     setTimeout(function () { window.print(); setTimeout(done, 1500); }, 60);
   }
 
+
+  /* 학생: 우리 반 › 출결 — 내 출결 기록과 서류 사진 내기 */
+  var myAtt = null; // apiMyAttend 결과
+  var ATT_DOW = ['일', '월', '화', '수', '목', '금', '토'];
+  function attLine(r) {
+    var w = r.type + (r.cat ? ' · ' + r.cat : '') + (r.kind ? ' · ' + r.kind : '');
+    if (r.periods && r.periods.length) w += ' (' + (r.type === '조퇴' ? r.periods[0] + '교시부터' : r.periods.join(',') + '교시') + ')';
+    return w;
+  }
+  function drawMyAttend(box) {
+    var sec = el('section', 'myatt');
+    sec.appendChild(el('h3', 'sec', '내 출결'));
+    box.appendChild(sec);
+    if (!myAtt) {
+      spin(sec);
+      call('apiMyAttend', token).then(function (res) { myAtt = must(res); if (tabOf[current] === 'trip' && trip.view === 'list') draw(); })
+        .catch(function (err) { if (err && err.message === 'expired') return; sec.appendChild(el('p', 'empty', friendly(err))); });
+      return;
+    }
+    var items = myAtt.items || [];
+    if (!items.length) { sec.appendChild(el('p', 'empty', '올해 결석·지각·조퇴·결과 기록이 없어요.')); return; }
+    var todo = items.filter(function (r) { return r.need.length && !r.done; });
+    var rest = items.filter(function (r) { return !(r.need.length && !r.done); });
+    if (todo.length) sec.appendChild(el('p', 'hint', '서류는 사진으로 먼저 올리고, 종이는 선생님께 내 주세요. 선생님이 확인하면 "받음"으로 바뀌어요.'));
+    todo.forEach(function (r) {
+      var card = el('article', 'task att-card');
+      card.appendChild(el('h3', '', md(r.date) + '(' + ATT_DOW[r.day] + ') ' + attLine(r)));
+      var docs = el('div', 'att-docs');
+      r.need.forEach(function (n) {
+        var got = r.got.indexOf(n) >= 0, sent = !!(r.photos || {})[n];
+        var line = el('div', 'att-doc' + (got ? ' got' : sent ? ' sent' : ''));
+        line.appendChild(el('strong', '', n));
+        line.appendChild(el('span', 'st', got ? '받음' : sent ? '사진 냄 · 확인 대기' : '아직 안 냄'));
+        if (!got) line.appendChild(button('btn quiet sm', sent ? '다시 올리기' : '사진 올리기', function () { pickAttPhoto(r, n); }));
+        docs.appendChild(line);
+      });
+      card.appendChild(docs);
+      sec.appendChild(card);
+    });
+    if (rest.length) {
+      var list = el('div', 'att-past');
+      rest.forEach(function (r) {
+        var row = el('div', 'att-row');
+        row.appendChild(el('span', 'd', md(r.date) + '(' + ATT_DOW[r.day] + ')'));
+        row.appendChild(el('span', 'w', attLine(r)));
+        row.appendChild(el('span', 'st', r.need.length ? '서류 다 냄' : ''));
+        list.appendChild(row);
+      });
+      sec.appendChild(list);
+    }
+  }
+  function pickAttPhoto(r, n) {
+    var input = el('input'); input.type = 'file'; input.accept = 'image/*'; input.hidden = true;
+    document.body.appendChild(input);
+    input.addEventListener('change', function () {
+      var file = input.files[0]; input.remove();
+      if (!file) return;
+      if (!/^image\//.test(file.type)) { alertSheet('사진 파일만 올릴 수 있어요.'); return; }
+      var w = el('div'); w.appendChild(el('h3', '', n + ' 사진 올리는 중')); var sp = el('div'); spin(sp); w.appendChild(sp); openSheet(w);
+      loadImage(fileUrl(file), file.name).then(function (img) {
+        var b64 = fitJpeg(img, [1800, 1400, 1100], 1300000); // 글씨가 읽히도록 크게
+        if (!b64) throw Object.assign(new Error('사진이 너무 커요. 다른 사진으로 해 주세요.'), { known: true });
+        return call('apiAttendPhoto', token, r.date, n, b64);
+      }).then(function (res) { myAtt = must(res); closeSheet(); draw(); })
+        .catch(function (err) { closeSheet(); if (err && err.message !== 'expired') alertSheet(friendly(err)); });
+    });
+    input.click();
+  }
+
   /* 학생: 우리 반 › 체험학습 */
   var trip = { data: null, view: 'list', edit: null };
   function drawTrips(box) {
@@ -2353,6 +2439,8 @@
     var d = trip.data;
     if (trip.view === 'form') return drawTripForm(box);
     if (trip.view === 'report') return drawTripReport(box);
+    drawMyAttend(box);
+    box.appendChild(el('h3', 'sec', '교외체험학습'));
     var top = el('div', 'summary');
     var c = el('div'); c.appendChild(el('strong', '', '올해 남은 날 ' + d.info.leftYear + '일')); c.appendChild(el('span', '', ' / 연간 ' + d.info.limit + '일 (평일 기준)')); top.appendChild(c);
     var tools = el('div', 'tools'); tools.appendChild(button('', '+ 신청서 쓰기', function () { trip.edit = null; trip.view = 'form'; draw(); window.scrollTo(0, 0); })); top.appendChild(tools);
@@ -2755,12 +2843,29 @@
         var b = button('dc', (got ? '✓ ' : '') + n + (got === '갈음' ? ' (전날 서류)' : ''), function () { setDoc(s, n, got ? false : true); });
         b.setAttribute('aria-pressed', got ? 'true' : 'false');
         box.appendChild(b);
+        if (!got && (r.photos || {})[n]) box.appendChild(button('dc photo', '사진 보기', function () { showAttPhoto(s, n); }));
         // 연속 질병: 전날 병원 증빙으로 갈음
         if (n === SICK_DOC && !got && r.prevDoc) box.appendChild(button('dc sub', '전날 서류로 갈음', function () { setDoc(s, n, '갈음'); }));
       });
       row.appendChild(box);
       if (need.length && done()) row.classList.add('done');
       return row;
+    }
+    function showAttPhoto(s, n) {
+      var w = el('div'); w.appendChild(el('h3', '', s.name + ' · ' + n));
+      var box = el('div', 'att-photo'); spin(box); w.appendChild(box);
+      var pair = el('div', 'pair');
+      pair.appendChild(button('btn quiet', '닫기', closeSheet));
+      pair.appendChild(button('btn', '받음으로 표시', function () { closeSheet(); setDoc(s, n, true); }));
+      w.appendChild(pair);
+      openSheet(w);
+      call('apiTeacherAttendPhoto', ttoken, tCourse, d.date, s.id, n).then(function (res) {
+        res = must(res); box.textContent = '';
+        var a = el('a'); a.href = res.url; a.target = '_blank'; a.rel = 'noopener';
+        var im = el('img'); im.alt = n + ' 사진'; im.src = 'data:image/jpeg;base64,' + res.img; a.appendChild(im);
+        box.appendChild(a);
+        box.appendChild(el('p', 'hint', '사진을 누르면 드라이브에서 크게 열려요.'));
+      }).catch(function (err) { box.textContent = ''; if (err && err.message !== 'expired') box.appendChild(el('p', 'empty', friendly(err))); });
     }
     function setDoc(s, n, v) {
       var x = items[s.id], r = s.rec;

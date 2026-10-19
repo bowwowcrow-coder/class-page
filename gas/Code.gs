@@ -25,7 +25,7 @@ const CFG_HELP = {
 };
 // 설정 도우미가 생기기 전부터 쓰던 시트는 예전에 보이던 그대로 이어 간다
 const LEGACY = { school: '인천디자인고등학교', tab: '쉅', refsLabel: '레퍼런스' };
-const SCHEMA_VERSION = '18';            // 시트 구조가 바뀌는 업데이트마다 올린다 → 첫 접속 때 setup이 자동으로 돈다
+const SCHEMA_VERSION = '19';            // 시트 구조가 바뀌는 업데이트마다 올린다 → 첫 접속 때 setup이 자동으로 돈다
 const TZ = 'Asia/Seoul';
 const SHEET = { TRIPS: '체험학습', CHECKS: '체크', COURSES: '수업', STUDENTS: '학생', NOTICES: '공지', REFS: '레퍼런스', TASKS: '과제', SUBS: '제출', GRADES: '채점', ALLOW: '허용', LOG: '로그', CONFIG: '설정', START: '시작하기', SURVEYS: '설문', ANSWERS: '응답', MEMES: '메인짤', ATTEND: '출결' };
 
@@ -56,7 +56,7 @@ const ALLOW_HEADERS = ['과제ID', '학번', '허용일시'];
 const LOG_HEADERS = ['일시', '학번', '이름', '동작', '상세'];
 const SURVEY_HEADERS = ['설문ID', '수업', '제목', '설명', '익명', '문항', '응답 받기', '마감', '게시', '참여'];
 const ANSWER_HEADERS = ['설문ID', '학번', '이름', '응답일시', '응답'];
-const ATTEND_HEADERS = ['날짜', '수업', '학번', '이름', '유형', '구분', '교시', '사유', '나이스 입력', '수정일시', '인정 사유', '받은 서류', '서류 직접'];
+const ATTEND_HEADERS = ['날짜', '수업', '학번', '이름', '유형', '구분', '교시', '사유', '나이스 입력', '수정일시', '인정 사유', '받은 서류', '서류 직접', '서류 사진'];
 const MEME_HEADERS = ['짤ID', '학번', '이름', '올린일시', '문구', '상태', '호수', '파일ID', '썸네일', '투표', '이름 공개'];
 const C = { ID: 0, NAME: 1, COURSES: 2, CODE: 3, HASH: 4, SALT: 5, FAILS: 6, LOCK: 7, SETAT: 8, LAST: 9, NOTE: 10 };
 const S = { TASK: 0, ID: 1, NAME: 2, AT: 3, FIRST: 4, STATE: 5, LATE: 6, COUNT: 7, FOLDER: 8, ZIP: 9, THUMB: 10, FILES: 11, ALT: 12 };
@@ -509,7 +509,9 @@ function wizLoad(key) {
   const count = {};
   const students = rows_(SHEET.STUDENTS, STUDENT_HEADERS.length).filter(function (v) { return normId_(v[C.ID]); });
   const savedUrl = PropertiesService.getScriptProperties().getProperty('WEB_URL') || '';
-  const url = WEB_URL_RE.test(savedUrl) ? savedUrl : '';
+  // 학생에게 줄 주소: 따로 만든 사이트(PUBLIC_URL)가 있으면 그쪽 — 링크 미리보기·홈 화면 아이콘이 붙는다
+  const pub = PropertiesService.getScriptProperties().getProperty('PUBLIC_URL') || '';
+  const url = /^https:\/\/[^\s]+$/.test(pub) ? pub : WEB_URL_RE.test(savedUrl) ? savedUrl : '';
   return {
     ok: true,
     title: c.title, school: c.school, tab: c.tab === c.title ? '' : c.tab,
@@ -2236,7 +2238,7 @@ function apiTeacherMemeDelete(token, id) {
  * 유형: 결석·지각·조퇴·결과, 구분: 질병·미인정·인정·기타
  * 교시: 결과는 빠진 교시들(예: 3,4), 조퇴는 떠난 교시 하나(예: 5 → 5교시부터)
  */
-const AT = { DATE: 0, COURSE: 1, SID: 2, NAME: 3, TYPE: 4, CAT: 5, PER: 6, REASON: 7, NEIS: 8, AT: 9, KIND: 10, DOCS: 11, DOCNAME: 12 };
+const AT = { DATE: 0, COURSE: 1, SID: 2, NAME: 3, TYPE: 4, CAT: 5, PER: 6, REASON: 7, NEIS: 8, AT: 9, KIND: 10, DOCS: 11, DOCNAME: 12, PHOTOS: 13 };
 // 인정 사유와 받아야 할 서류 (기타는 선생님이 서류 이름을 직접 적거나 '없음')
 const ATT_KINDS = ['생리통', '현장체험(국내)', '현장체험(국외)', '대입', '교내행사', '현장실습', '기타'];
 const KIND_DOCS = { '생리통': ['출결계'], '현장체험(국내)': ['출결계', '신청서', '보고서'], '현장체험(국외)': ['출결계', '신청서', '보고서'],
@@ -2285,6 +2287,9 @@ function attView_(r) {
     periods: String(r[AT.PER] || '').split(',').map(Number).filter(function (n) { return n > 0; }),
     reason: String(r[AT.REASON] || ''), neis: r[AT.NEIS] === true,
     kind: String(r[AT.KIND] || ''), docName: String(r[AT.DOCNAME] || ''), docs: attDocs_(r[AT.DOCS]) };
+  const ph = attDocs_(r[AT.PHOTOS]);
+  v.photos = {}; // 학생이 사진으로 낸 서류 (이름 → true). 파일 ID는 화면에 내보내지 않는다
+  Object.keys(ph).forEach(function (k) { if (ph[k]) v.photos[k] = true; });
   v.need = attNeed_(v.type, v.cat, v.kind, v.docName);
   v.docsDone = v.need.every(function (n) { return !!v.docs[n]; });
   return v;
@@ -2435,6 +2440,80 @@ function apiTeacherAttendMonth(token, courseId, month) {
   return { ok: true, month: month, types: ATT_TYPES, cats: ATT_CATS.concat(['미정']),
     students: ac.roster.map(function (s) { return { id: s.id, cls: s.cls, num: s.num, name: s.name, note: s.note, counts: by[s.id] }; }),
     pending: Object.keys(pending).sort().map(function (d) { return { date: d, count: pending[d] }; }) };
+}
+
+/* ───────────── 출결 서류 사진 (학생이 올리고, 선생님이 보고 '받음'을 누른다) ───────────── */
+const ATT_PHOTO_MAX = 1400000; // base64 글자 수 (약 1MB 사진)
+
+function attFolder_() { return childFolder_(rootFolder_(), '출결 서류'); }
+/** 학생 본인의 담임 반 출결 기록 (올해) */
+function myAttend_(sid, cell) {
+  const course = tripCourse_(sid, cell);
+  if (!course) return null;
+  const year = Utilities.formatDate(new Date(), TZ, 'yyyy');
+  const t = attRows_(course.id);
+  return { course: course, t: t, mine: t.mine.filter(function (m) { return m.sid === sid && m.date.slice(0, 4) === year; }) };
+}
+function myAttendView_(sid, cell) {
+  const a = myAttend_(sid, cell);
+  if (!a) return { ok: true, items: [], none: true };
+  const items = a.mine.map(function (m) {
+    const v = attView_(m.r);
+    return { date: m.date, day: dayOf_(m.date), type: v.type, cat: v.cat, kind: v.kind, periods: v.periods,
+      need: v.need, got: v.need.filter(function (n) { return !!v.docs[n]; }), photos: v.photos, done: v.docsDone };
+  }).sort(function (x, y) { return x.date < y.date ? 1 : x.date > y.date ? -1 : 0; });
+  return { ok: true, items: items };
+}
+
+function apiMyAttend(token) {
+  const s = sessionStudent_(token);
+  if (!s) return expired_();
+  return myAttendView_(normId_(s.v[C.ID]), s.v[C.COURSES]);
+}
+
+/** 서류 사진 올리기. 같은 서류를 다시 올리면 앞의 사진은 휴지통으로 간다. */
+function apiAttendPhoto(token, date, doc, img) {
+  const s = sessionStudent_(token);
+  if (!s) return expired_();
+  const sid = normId_(s.v[C.ID]), name = String(s.v[C.NAME]).trim();
+  date = attDate_(date); doc = String(doc || '').slice(0, 30);
+  img = cleanB64_(img, ATT_PHOTO_MAX);
+  if (!img) return fail_('사진을 다시 골라 주세요. jpg나 png 사진만 올릴 수 있어요.');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const a = myAttend_(sid, s.v[C.COURSES]);
+    const m = a && a.mine.filter(function (x) { return x.date === date; })[0];
+    if (!m) return fail_('그날 출결 기록이 없어요. 새로고침해 주세요.');
+    const v = attView_(m.r);
+    if (v.need.indexOf(doc) < 0) return fail_('이 기록에는 그 서류가 필요 없어요.');
+    if (v.docs[doc]) return fail_('선생님이 이미 받은 서류예요.');
+    const ph = attDocs_(m.r[AT.PHOTOS]);
+    if (ph[doc]) { try { DriveApp.getFileById(String(ph[doc])).setTrashed(true); } catch (e) {} }
+    const file = childFolder_(attFolder_(), sid + '_' + clean_(name))
+      .createFile(Utilities.newBlob(Utilities.base64Decode(img), 'image/jpeg', date + '_' + sid + '_' + clean_(name) + '_' + clean_(doc) + '.jpg'));
+    ph[doc] = file.getId();
+    a.t.sh.getRange(m.i + 2, AT.PHOTOS + 1).setValue(JSON.stringify(ph));
+  } finally {
+    lock.releaseLock();
+  }
+  log_(sid, name, '출결 서류 사진', date + ' ' + doc);
+  return myAttendView_(sid, s.v[C.COURSES]);
+}
+
+/** 선생님: 학생이 올린 서류 사진 보기 */
+function apiTeacherAttendPhoto(token, courseId, date, sid, doc) {
+  if (!isTeacher_(token)) return expired_();
+  courseId = String(courseId); date = attDate_(date); sid = normId_(sid); doc = String(doc || '').slice(0, 30);
+  const m = attRows_(courseId).mine.filter(function (x) { return x.date === date && x.sid === sid; })[0];
+  const id = m && attDocs_(m.r[AT.PHOTOS])[doc];
+  if (!id) return fail_('올라온 사진이 없어요.');
+  try {
+    const blob = DriveApp.getFileById(String(id)).getBlob();
+    return { ok: true, img: Utilities.base64Encode(blob.getBytes()), url: 'https://drive.google.com/file/d/' + id + '/view' };
+  } catch (e) {
+    return fail_('사진을 열 수 없어요. 드라이브에서 지워졌을 수 있어요.');
+  }
 }
 
 /* ───────────── 교사: 공지·레퍼런스 쓰기 ───────────── */
@@ -3024,6 +3103,7 @@ function autoSyncTick() {
   try { selfCheck_(); } catch (e) { syncLog_('진단 실패: ' + e.message); }
   try { onceWebUrl_(); } catch (e) {}
   try { onceTestStudent_(); } catch (e) { try { diagRow_('테스트 학생 실패', e.message); } catch (x) {} }
+  try { onceCleanup5_(); } catch (e) { try { diagRow_('정리 실패', e.message); } catch (x) {} }
   try { onceCheckTask_(); } catch (e) { try { diagRow_('체크 과제 실패', e.message); } catch (x) {} }
   try { onceTasks_(); } catch (e) { syncLog_('정리 실패: ' + e.message); try { diagRow_('동아리 추가 실패', e.message); } catch (x) {} }
   try {
@@ -3400,4 +3480,19 @@ function onceTestStudent_() {
   const row = freeRow_(sh, 1);
   sh.getRange(row, 1, 1, 4).setNumberFormat('@').setValues([['30420', '조김준환', '', '4208']]);
   diagRow_('테스트 학생', '30420 조김준환 (확인코드 4208) 추가');
+}
+
+/** 한 번만: 학생용 주소를 새 사이트로, 예전 테스트 학생 30499 행 지우기 */
+function onceCleanup5_() {
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty('ONCE5_DONE') === 'v1') return;
+  props.setProperty('ONCE5_DONE', 'v1');
+  props.setProperty('PUBLIC_URL', 'https://total-page.pages.dev/');
+  const sh = sheet_(SHEET.STUDENTS);
+  const rows = read_(sh, 2);
+  let gone = 0;
+  for (let i = rows.length - 1; i >= 0; i--) {
+    if (normId_(rows[i][0]) === '30499' && String(rows[i][1]).trim() === '테스트학생') { sh.deleteRow(i + 2); gone++; }
+  }
+  diagRow_('정리', '학생용 주소 → total-page.pages.dev, 30499 테스트학생 ' + (gone ? '지움' : '없음'));
 }
