@@ -35,7 +35,7 @@
 <script>
 (function () {
   // 실제 데이터는 구글 시트(Apps Script)에 그대로 있다. 이 페이지는 화면을 받아 와서 띄우고, 버튼 동작을 그쪽으로 넘겨준다.
-  var API = '__API__';
+  var API = 'https://script.google.com/macros/s/AKfycbyw6oiaICnnbyw2l0xVsVCJ0VBI1lz4mQM3N9BpNOs7p0edgAV9dcWNKQxMNTMhIdVykw/exec';
   // 화면 코드가 쓰던 google.script.run 을 그대로 흉내 낸다
   var shim = '<script>(function(){var API=' + JSON.stringify(API) + ';' +
     'function mk(ok,fail){var o={withSuccessHandler:function(f){return mk(f,fail)},withFailureHandler:function(f){return mk(ok,f)}};' +
