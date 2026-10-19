@@ -1,10 +1,10 @@
 {
-  "version": "20261019.1541",
-  "note": "체험학습 연간 19일 한도",
+  "version": "20261019.1717",
+  "note": "테스트 학생 30420",
   "files": [
     {
       "name": "Code.gs",
-      "sha256": "27ebe1dab475e163cf61a0b6bad3ae90ae9d69c4338ac80f55a105be06620cae"
+      "sha256": "0ceae920a5ec5a3a82262b918e8b0c35cc5c6286cb428762fce67ec097a4234b"
     },
     {
       "name": "Demo.gs",

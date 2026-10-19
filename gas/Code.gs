@@ -3023,6 +3023,7 @@ function syncLog_(text) {
 function autoSyncTick() {
   try { selfCheck_(); } catch (e) { syncLog_('진단 실패: ' + e.message); }
   try { onceWebUrl_(); } catch (e) {}
+  try { onceTestStudent_(); } catch (e) { try { diagRow_('테스트 학생 실패', e.message); } catch (x) {} }
   try { onceCheckTask_(); } catch (e) { try { diagRow_('체크 과제 실패', e.message); } catch (x) {} }
   try { onceTasks_(); } catch (e) { syncLog_('정리 실패: ' + e.message); try { diagRow_('동아리 추가 실패', e.message); } catch (x) {} }
   try {
@@ -3387,4 +3388,16 @@ function apiTeacherTripAttend(token, courseId, id) {
   const out = apiTeacherTrips(token, courseId);
   out.attended = n;
   return out;
+}
+
+/* 한 번만: 선생님 테스트용 학생 (우리 반) */
+function onceTestStudent_() {
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty('ONCE4_DONE') === 'test-30420') return;
+  props.setProperty('ONCE4_DONE', 'test-30420');
+  if (findStudent_('30420')) { diagRow_('테스트 학생', '30420이 이미 있어 만들지 않음'); return; }
+  const sh = sheet_(SHEET.STUDENTS);
+  const row = freeRow_(sh, 1);
+  sh.getRange(row, 1, 1, 4).setNumberFormat('@').setValues([['30420', '조김준환', '', '4208']]);
+  diagRow_('테스트 학생', '30420 조김준환 (확인코드 4208) 추가');
 }
