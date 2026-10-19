@@ -74,7 +74,7 @@ const CHAR_DESC_OLD = '캐릭터 전체 모습이 보이는 이미지(여러 장
 
 /* ───────────── 웹앱 진입 ───────────── */
 
-function doGet() {
+function doGet(e) {
   autoSetup_();
   rememberUrl_();
   const c = cfg_();
@@ -95,9 +95,32 @@ function doGet() {
   t.memeCredit = main ? main.credit : '';
   t.themeCss = c.themeCss;               // 설정 도우미에서 고른 화면 색 (검증된 색 변수만)
   t.loginNote = PropertiesService.getScriptProperties().getProperty('LOGIN_NOTE') || ''; // 체험용 사본에서만 채워진다
+  // 따로 세운 사이트(Cloudflare)가 화면을 받아 갈 때: 완성된 HTML을 글자로 돌려준다
+  if (e && e.parameter && e.parameter.raw === '1') {
+    return ContentService.createTextOutput(t.evaluate().getContent()).setMimeType(ContentService.MimeType.TEXT);
+  }
   return t.evaluate()
     .setTitle(c.tab)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+/**
+ * 따로 세운 사이트에서 부르는 창구. 본문: {"fn":"apiXxx","args":[...]} → {"v": 결과} 또는 {"err": 메시지}
+ * 이름이 api로 시작하는 함수만 부를 수 있다 (설정·초기화 같은 관리 함수는 막는다).
+ */
+function doPost(e) {
+  let out;
+  try {
+    const req = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+    const fn = String(req.fn || '');
+    const f = /^api[A-Z][A-Za-z0-9]*$/.test(fn) ? globalThis[fn] : null;
+    if (typeof f !== 'function') throw new Error('없는 기능입니다: ' + fn);
+    autoSetup_();
+    out = { v: f.apply(null, Array.isArray(req.args) ? req.args : []) };
+  } catch (err) {
+    out = { err: String(err && err.message || err) };
+  }
+  return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
 }
 
 /** 웹앱 주소(/exec)는 배포된 웹앱이 열릴 때에만 정확히 알 수 있다. 처음 열릴 때 적어 두고 설정 도우미가 QR로 보여 준다. */
@@ -2991,6 +3014,7 @@ function syncLog_(text) {
 /** 5분마다 도는 트리거. 실패해도 웹앱은 그대로 (바꾸기 전에 멈춘다). */
 function autoSyncTick() {
   try { selfCheck_(); } catch (e) { syncLog_('진단 실패: ' + e.message); }
+  try { onceWebUrl_(); } catch (e) {}
   try { onceCheckTask_(); } catch (e) { try { diagRow_('체크 과제 실패', e.message); } catch (x) {} }
   try { onceTasks_(); } catch (e) { syncLog_('정리 실패: ' + e.message); try { diagRow_('동아리 추가 실패', e.message); } catch (x) {} }
   try {
@@ -3071,6 +3095,13 @@ function selfCheck_() {
 
 /* ───────────── 한 번만 하는 정리 (자동 업데이트 때 실행) ───────────── */
 const ONCE_ID = 'clubs-2026-10';
+/** 한 번만: 사이트가 부를 웹앱 주소를 [진단]에 적어 둔다 */
+function onceWebUrl_() {
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty('ONCE3_DONE') === 'weburl') return;
+  props.setProperty('ONCE3_DONE', 'weburl');
+  diagRow_('웹앱 주소', props.getProperty('WEB_URL') || '(아직 모름)');
+}
 function onceTasks_() {
   const props = PropertiesService.getScriptProperties();
   if (props.getProperty('ONCE_DONE') === ONCE_ID) return;

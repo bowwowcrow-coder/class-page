@@ -1,10 +1,10 @@
 {
-  "version": "20261016.1204",
-  "note": "출결: 모든 수업에 탭, 지각 교시 선택",
+  "version": "20261019.1027",
+  "note": "사이트 이전 준비: 화면·기능 창구",
   "files": [
     {
       "name": "Code.gs",
-      "sha256": "bc620fc44ad17edeccc2231dac1416234b411f173c08a6cbf06f141decd2dbd7"
+      "sha256": "ae6a5060bb66a082d0d129e075c32cfc084e5dd98e3f14630543b3c3da6c8dfd"
     },
     {
       "name": "Demo.gs",
