@@ -25,9 +25,9 @@ const CFG_HELP = {
 };
 // 설정 도우미가 생기기 전부터 쓰던 시트는 예전에 보이던 그대로 이어 간다
 const LEGACY = { school: '인천디자인고등학교', tab: '쉅', refsLabel: '레퍼런스' };
-const SCHEMA_VERSION = '17';            // 시트 구조가 바뀌는 업데이트마다 올린다 → 첫 접속 때 setup이 자동으로 돈다
+const SCHEMA_VERSION = '18';            // 시트 구조가 바뀌는 업데이트마다 올린다 → 첫 접속 때 setup이 자동으로 돈다
 const TZ = 'Asia/Seoul';
-const SHEET = { CHECKS: '체크', COURSES: '수업', STUDENTS: '학생', NOTICES: '공지', REFS: '레퍼런스', TASKS: '과제', SUBS: '제출', GRADES: '채점', ALLOW: '허용', LOG: '로그', CONFIG: '설정', START: '시작하기', SURVEYS: '설문', ANSWERS: '응답', MEMES: '메인짤', ATTEND: '출결' };
+const SHEET = { TRIPS: '체험학습', CHECKS: '체크', COURSES: '수업', STUDENTS: '학생', NOTICES: '공지', REFS: '레퍼런스', TASKS: '과제', SUBS: '제출', GRADES: '채점', ALLOW: '허용', LOG: '로그', CONFIG: '설정', START: '시작하기', SURVEYS: '설문', ANSWERS: '응답', MEMES: '메인짤', ATTEND: '출결' };
 
 const PIN_LENGTH = 4;          // PIN 자릿수
 const MAX_FAILS = 5;           // 연속 오류 허용 횟수
@@ -45,6 +45,11 @@ const TASK_HEADERS = ['과제ID', '수업', '제목', '설명', '정시마감', 
 // 체크 항목: 학생이 올리지 않고 선생님이 항목마다 '냈다'를 표시하는 과제 (예: 실물 작품)
 const CHECK_HEADERS = ['과제ID', '학번', '이름', '체크', '수정일시'];
 const CHECK_MAX = 20;
+// 교외체험학습: 학생이 칸을 채우면 학교 양식(신청서·결과보고서)에 그대로 들어간다
+const TRIP_HEADERS = ['신청ID', '수업', '학번', '이름', '구분', '상태', '시작', '끝', '일수', '신청 내용', '보고 내용', '신청일시', '보고일시', '처리일시', '메모'];
+const TR = { ID: 0, COURSE: 1, SID: 2, NAME: 3, KIND: 4, STATE: 5, FROM: 6, TO: 7, DAYS: 8, APP: 9, REP: 10, AT: 11, RAT: 12, DONE: 13, MEMO: 14 };
+const TRIP_FORMS = ['현장체험학습', '친·인척 방문', '가족동반 여행', '고적 답사 및 향토 행사 참여', '기타'];
+const TRIP_YEAR_LIMIT = 19; // 본교 학칙 출석인정 기간 (연간)
 const SUB_HEADERS = ['과제ID', '학번', '이름', '제출일시', '최초제출일시', '상태', '지연일', '횟수', '폴더ID', 'ZIP', '썸네일', '파일', '대체'];
 const GRADE_HEADERS = ['과제ID', '학번', '이름', '등급', '점수', '채점일시', '메모', '확인일시', '확인점수', '비공개 메모'];
 const ALLOW_HEADERS = ['과제ID', '학번', '허용일시'];
@@ -373,6 +378,9 @@ function setup() {
   r.sh.getRange('B1').setNote('익명 설문은 학번과 이름이 비어 있고, 응답일시도 날짜까지만 남습니다.');
 
   // 출결 (담임 학급, 교사만 본다). 출석은 기록하지 않고, 출석이 아닌 학생만 한 줄씩 남긴다.
+  r = ensureSheet_(ss, SHEET.TRIPS, TRIP_HEADERS);
+  if (r.created) { r.sh.getRange('A:H').setNumberFormat('@'); r.sh.getRange('L:N').setNumberFormat('yyyy-mm-dd hh:mm'); }
+  r.sh.getRange('A1').setNote('학생 화면 › 우리 반 › 체험학습에서 신청합니다. 교사 화면 › 우리 반 › 출결 › 체험학습에서 확인·출력합니다.');
   r = ensureSheet_(ss, SHEET.CHECKS, CHECK_HEADERS);
   if (r.created) { r.sh.getRange('A:B').setNumberFormat('@'); r.sh.getRange('E:E').setNumberFormat('yyyy-mm-dd hh:mm'); }
   r.sh.getRange('A1').setNote('교사 화면 › 과제 › 체크 항목을 누르면 여기에 적힙니다.');
@@ -2799,7 +2807,7 @@ function sheet_(name) {
   if (sh) return sh;
   const auto = {};
   auto[SHEET.SUBS] = SUB_HEADERS; auto[SHEET.GRADES] = GRADE_HEADERS; auto[SHEET.ALLOW] = ALLOW_HEADERS; auto[SHEET.LOG] = LOG_HEADERS;
-  auto[SHEET.SURVEYS] = SURVEY_HEADERS; auto[SHEET.ANSWERS] = ANSWER_HEADERS; auto[SHEET.MEMES] = MEME_HEADERS; auto[SHEET.ATTEND] = ATTEND_HEADERS; auto[SHEET.CHECKS] = CHECK_HEADERS;
+  auto[SHEET.SURVEYS] = SURVEY_HEADERS; auto[SHEET.ANSWERS] = ANSWER_HEADERS; auto[SHEET.MEMES] = MEME_HEADERS; auto[SHEET.ATTEND] = ATTEND_HEADERS; auto[SHEET.CHECKS] = CHECK_HEADERS; auto[SHEET.TRIPS] = TRIP_HEADERS;
   if (!auto[name]) throw new Error('[' + name + '] 시트가 없습니다. 편집기에서 setup을 먼저 실행해 주세요.');
   try { sh = ss.insertSheet(name); } catch (e) { sh = ss.getSheetByName(name); } // 동시에 두 요청이 만들려 한 경우
   if (!sh) throw new Error('[' + name + '] 시트를 만들지 못했습니다. 편집기에서 setup을 실행해 주세요.');
@@ -3149,4 +3157,222 @@ function onceCheckTask_() {
   sh.getRange(freeRow_(sh, 1), 1, 1, TASK_HEADERS.length).setValues([[id, '제품디자인', '작품 제출 확인', '실물로 낸 작품을 선생님이 확인해 체크합니다.',
     now, now, false, '', false, false, '', false, '토끼, 시계, 쿠키, 케이크, 의자, 이케아']]);
   diagRow_('체크 과제', '제품디자인 › 작품 제출 확인 (미게시) 만듦');
+}
+
+
+/* ───────────── 교외체험학습 (학급) ───────────── */
+function tripJson_(v) { try { const o = JSON.parse(String(v || '{}')); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
+function tripClean_(v, n) { return String(v == null ? '' : v).replace(/\r/g, '').trim().slice(0, n || 100); }
+/** 기간 안의 평일 수 (공휴일은 학생이 일수를 직접 고친다) */
+function weekdays_(from, to) {
+  let n = 0;
+  for (let d = from; d <= to; d = shiftDay_(d, 1)) { const w = dayOf_(d); if (w !== 0 && w !== 6) n++; if (n > 400) break; }
+  return n;
+}
+function shiftDay_(date, k) { const p = date.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + k)).toISOString().slice(0, 10); }
+/** 학생이 속한 학급(담임 반) */
+function tripCourse_(sid, cell) {
+  return coursesOf_(sid, cell).filter(function (c) { return c.kind === 'class'; })[0] || null;
+}
+function tripRows_() { const sh = sheet_(SHEET.TRIPS); return { sh: sh, rows: read_(sh, TRIP_HEADERS.length) }; }
+function tripView_(r, all) {
+  const sid = normId_(r[TR.SID]), from = attDate_(r[TR.FROM]);
+  // 이전까지 쓴 날: 같은 해, 이보다 앞서 시작한 승인된 체험학습
+  const used = all.filter(function (x) {
+    return normId_(x[TR.SID]) === sid && String(x[TR.STATE]) === '승인' && String(x[TR.ID]) !== String(r[TR.ID]) &&
+      attDate_(x[TR.FROM]).slice(0, 4) === from.slice(0, 4) && attDate_(x[TR.FROM]) < from;
+  }).reduce(function (a, x) { return a + (Number(x[TR.DAYS]) || 0); }, 0);
+  return { id: String(r[TR.ID]), course: String(r[TR.COURSE]), sid: sid, name: String(r[TR.NAME]), kind: String(r[TR.KIND]),
+    state: String(r[TR.STATE] || '신청'), from: from, to: attDate_(r[TR.TO]), days: Number(r[TR.DAYS]) || 0, usedBefore: used,
+    app: tripJson_(r[TR.APP]), rep: r[TR.REP] ? tripJson_(r[TR.REP]) : null,
+    at: r[TR.AT] instanceof Date ? koDate_(r[TR.AT]) : '', rat: r[TR.RAT] instanceof Date ? koDate_(r[TR.RAT]) : '',
+    appDate: r[TR.AT] instanceof Date ? Utilities.formatDate(r[TR.AT], TZ, 'yyyy-MM-dd') : '',
+    repDate: r[TR.RAT] instanceof Date ? Utilities.formatDate(r[TR.RAT], TZ, 'yyyy-MM-dd') : '',
+    memo: String(r[TR.MEMO] || '') };
+}
+function tripInfo_(v, course) {
+  const id = normId_(v[C.ID]), p = idParts_(id);
+  const desc = course && course.desc || '';
+  const dept = (desc.match(/([가-힣]+과)/) || [])[1] || '';
+  const gc = desc.match(/(\d+)\s*학년\s*(\d+)\s*반/); // 학번의 반 번호와 학과 안의 반 번호가 다를 수 있어 수업 설명을 먼저 본다
+  return { name: String(v[C.NAME]).trim(), dept: dept, grade: gc ? Number(gc[1]) : p.grade, cls: gc ? Number(gc[2]) : p.cls, num: p.num, limit: TRIP_YEAR_LIMIT, forms: TRIP_FORMS, school: cfg_().school };
+}
+
+function apiTrips(token) {
+  const s = sessionStudent_(token);
+  if (!s) return expired_();
+  const sid = normId_(s.v[C.ID]);
+  const course = tripCourse_(sid, s.v[C.COURSES]);
+  if (!course) return fail_('담임 반(학급)에 등록되지 않았습니다.');
+  const all = tripRows_().rows;
+  const mine = all.filter(function (r) { return normId_(r[TR.SID]) === sid; }).map(function (r) { return tripView_(r, all); })
+    .sort(function (a, b) { return a.from < b.from ? 1 : -1; });
+  return { ok: true, trips: mine, info: tripInfo_(s.v, course) };
+}
+
+/** 신청서 저장 (새로 내기·고치기). 승인된 뒤에는 고칠 수 없다. */
+function apiTripSave(token, id, d) {
+  const s = sessionStudent_(token);
+  if (!s) return expired_();
+  d = d || {};
+  const sid = normId_(s.v[C.ID]);
+  const course = tripCourse_(sid, s.v[C.COURSES]);
+  if (!course) return fail_('담임 반(학급)에 등록되지 않았습니다.');
+  const kind = d.kind === '국외' ? '국외' : (d.kind === '국내' ? '국내' : '');
+  if (!kind) return fail_('국내인지 국외인지 골라 주세요.');
+  const from = attDate_(d.from), to = attDate_(d.to);
+  if (!from || !to) return fail_('기간을 골라 주세요.');
+  if (to < from) return fail_('끝나는 날이 시작하는 날보다 앞입니다.');
+  let days = parseInt(d.days, 10);
+  if (!(days >= 1 && days <= 60)) days = weekdays_(from, to);
+  if (!(days >= 1)) return fail_('기간에 평일이 없습니다. 일수를 확인해 주세요.');
+  const g = d.guardian || {}, dl = d.deleg || {};
+  const app = {
+    phone: tripClean_(d.phone, 20), ruleOk: d.ruleOk === true,
+    form: TRIP_FORMS.indexOf(d.form) >= 0 ? d.form : '', formEtc: tripClean_(d.formEtc, 40),
+    dest: tripClean_(d.dest, 80), stay: tripClean_(d.stay, 80),
+    guardian: { name: tripClean_(g.name, 20), rel: tripClean_(g.rel, 10), phone: tripClean_(g.phone, 20) },
+    withGuardian: d.withGuardian !== false,
+    deleg: { name: tripClean_(dl.name, 20), rel: tripClean_(dl.rel, 10), phone: tripClean_(dl.phone, 20), agree: dl.agree === true },
+    purpose: tripClean_(d.purpose, 300),
+    plan: (Array.isArray(d.plan) ? d.plan : []).slice(0, 12).map(function (x) {
+      x = x || {}; return { date: tripClean_(x.date, 20), place: tripClean_(x.place, 40), plan: tripClean_(x.plan, 200), note: tripClean_(x.note, 40) };
+    }).filter(function (x) { return x.date || x.place || x.plan || x.note; }),
+    safety: d.safety === true
+  };
+  if (!app.phone) return fail_('학생 연락처를 적어 주세요.');
+  if (!app.ruleOk) return fail_('학칙과 불허 기간을 확인했다고 체크해 주세요.');
+  if (!app.form) return fail_('학습 형태를 골라 주세요.');
+  if (app.form === '기타' && !app.formEtc) return fail_('기타 인정 내용을 적어 주세요.');
+  if (!app.dest) return fail_('목적지를 적어 주세요.');
+  if (!app.guardian.name || !app.guardian.phone) return fail_('보호자 이름과 연락처를 적어 주세요.');
+  if (!app.withGuardian && (!app.deleg.name || !app.deleg.phone || !app.deleg.agree)) return fail_('보호자가 함께 가지 않으면 인솔자 정보와 동의 체크가 필요합니다.');
+  if (!app.purpose) return fail_('신청 목적을 적어 주세요.');
+  if (!app.plan.length) return fail_('일자별 계획을 한 줄 이상 적어 주세요.');
+  if (days >= 5 && !app.safety) return fail_('5일 이상이면 안전 확인에 동의해야 합니다.');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const t = tripRows_();
+    let row, tid = String(id || '');
+    if (tid) {
+      const at = t.rows.map(function (r) { return String(r[TR.ID]); }).indexOf(tid);
+      if (at < 0 || normId_(t.rows[at][TR.SID]) !== sid) return fail_(CHANGED_MSG);
+      if (String(t.rows[at][TR.STATE]) === '승인') return fail_('승인된 신청서는 고칠 수 없습니다. 선생님께 말씀드려 주세요.');
+      row = at + 2;
+    } else {
+      const stamp = 'V' + Utilities.formatDate(new Date(), TZ, 'yyMMddHHmmss');
+      tid = stamp;
+      const used = t.rows.map(function (r) { return String(r[TR.ID]); });
+      for (let n = 2; used.indexOf(tid) >= 0; n++) tid = stamp + '-' + n;
+      row = t.sh.getLastRow() + 1;
+    }
+    t.sh.getRange(row, 1, 1, TRIP_HEADERS.length).setValues([[tid, course.id, sid, String(s.v[C.NAME]).trim(), kind, '신청', from, to, days,
+      JSON.stringify(app), row <= t.rows.length + 1 && id ? t.rows[row - 2][TR.REP] : '', new Date(), id ? t.rows[row - 2][TR.RAT] : '', '', '']]);
+  } finally {
+    lock.releaseLock();
+  }
+  log_(sid, String(s.v[C.NAME]).trim(), '체험학습 신청', kind + ' · ' + from + '~' + to);
+  return apiTrips(token);
+}
+
+/** 결과보고서: 승인된 뒤에 쓴다 */
+function apiTripReport(token, id, d) {
+  const s = sessionStudent_(token);
+  if (!s) return expired_();
+  d = d || {};
+  const sid = normId_(s.v[C.ID]);
+  const rep = { title: tripClean_(d.title, 80), body: tripClean_(d.body, 4000), place: tripClean_(d.place, 80),
+    form: TRIP_FORMS.indexOf(d.form) >= 0 ? d.form : '', formEtc: tripClean_(d.formEtc, 40) };
+  if (!rep.title) return fail_('제목을 적어 주세요.');
+  if (rep.body.length < 20) return fail_('체험한 것, 느낀 점, 배운 점을 조금 더 자세히 적어 주세요.');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const t = tripRows_();
+    const at = t.rows.map(function (r) { return String(r[TR.ID]); }).indexOf(String(id));
+    if (at < 0 || normId_(t.rows[at][TR.SID]) !== sid) return fail_(CHANGED_MSG);
+    if (String(t.rows[at][TR.STATE]) !== '승인') return fail_('신청이 승인된 뒤에 보고서를 낼 수 있습니다.');
+    t.sh.getRange(at + 2, TR.REP + 1).setValue(JSON.stringify(rep));
+    t.sh.getRange(at + 2, TR.RAT + 1).setValue(new Date());
+  } finally {
+    lock.releaseLock();
+  }
+  log_(sid, String(s.v[C.NAME]).trim(), '체험학습 보고서', String(id));
+  return apiTrips(token);
+}
+
+/** 아직 승인 전이면 학생이 신청을 거둔다 */
+function apiTripCancel(token, id) {
+  const s = sessionStudent_(token);
+  if (!s) return expired_();
+  const sid = normId_(s.v[C.ID]);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const t = tripRows_();
+    const at = t.rows.map(function (r) { return String(r[TR.ID]); }).indexOf(String(id));
+    if (at < 0 || normId_(t.rows[at][TR.SID]) !== sid) return fail_(CHANGED_MSG);
+    if (String(t.rows[at][TR.STATE]) === '승인') return fail_('승인된 신청은 선생님께 말씀드려 취소해 주세요.');
+    t.sh.deleteRow(at + 2);
+  } finally {
+    lock.releaseLock();
+  }
+  return apiTrips(token);
+}
+
+function apiTeacherTrips(token, courseId) {
+  if (!isTeacher_(token)) return expired_();
+  courseId = String(courseId);
+  const course = activeCourses_().filter(function (c) { return c.id === courseId; })[0];
+  if (!course) return fail_('수업을 찾을 수 없습니다.');
+  const studs = {};
+  rows_(SHEET.STUDENTS, STUDENT_HEADERS.length).forEach(function (v) { studs[normId_(v[C.ID])] = v; });
+  const all = tripRows_().rows;
+  const list = all.filter(function (r) { return String(r[TR.COURSE]) === courseId; }).map(function (r) {
+    const t = tripView_(r, all);
+    t.info = studs[t.sid] ? tripInfo_(studs[t.sid], course) : { name: t.name, dept: '', grade: '', cls: '', num: '', limit: TRIP_YEAR_LIMIT, forms: TRIP_FORMS, school: cfg_().school };
+    return t;
+  }).sort(function (a, b) { return (a.state === '신청' ? 0 : 1) - (b.state === '신청' ? 0 : 1) || (a.from < b.from ? 1 : -1); });
+  return { ok: true, trips: list };
+}
+
+/** 승인·반려 (반려는 사유를 남긴다) */
+function apiTeacherTripSet(token, courseId, id, state, memo) {
+  if (!isTeacher_(token)) return expired_();
+  if (['신청', '승인', '반려'].indexOf(state) < 0) return fail_('상태를 다시 골라 주세요.');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const t = tripRows_();
+    const at = t.rows.map(function (r) { return String(r[TR.ID]); }).indexOf(String(id));
+    if (at < 0) return fail_(CHANGED_MSG);
+    t.sh.getRange(at + 2, TR.STATE + 1).setValue(state);
+    t.sh.getRange(at + 2, TR.DONE + 1).setValue(new Date());
+    t.sh.getRange(at + 2, TR.MEMO + 1).setValue(tripClean_(memo, 200));
+  } finally {
+    lock.releaseLock();
+  }
+  return apiTeacherTrips(token, courseId);
+}
+
+/** 승인된 체험학습을 출결에 넣는다: 기간의 평일마다 결석·인정·현장체험(국내/국외) */
+function apiTeacherTripAttend(token, courseId, id) {
+  if (!isTeacher_(token)) return expired_();
+  const all = tripRows_().rows;
+  const r = all.filter(function (x) { return String(x[TR.ID]) === String(id); })[0];
+  if (!r) return fail_(CHANGED_MSG);
+  const t = tripView_(r, all);
+  if (t.state !== '승인') return fail_('승인한 뒤에 출결에 넣을 수 있습니다.');
+  let n = 0;
+  for (let d = t.from; d <= t.to; d = shiftDay_(d, 1)) {
+    const w = dayOf_(d);
+    if (w === 0 || w === 6) continue;
+    const res = apiTeacherAttendSave(token, t.course, d, t.sid, { type: '결석', cat: '인정', kind: '현장체험(' + t.kind + ')', reason: '교외체험학습' + (t.app.dest ? ' · ' + t.app.dest : '') });
+    if (res && res.ok) n++;
+    if (n > 60) break;
+  }
+  const out = apiTeacherTrips(token, courseId);
+  out.attended = n;
+  return out;
 }

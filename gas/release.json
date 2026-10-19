@@ -1,10 +1,10 @@
 {
-  "version": "20261019.1027",
-  "note": "사이트 이전 준비: 화면·기능 창구",
+  "version": "20261019.1432",
+  "note": "교외체험학습 신청서·결과보고서 + 아이콘 색",
   "files": [
     {
       "name": "Code.gs",
-      "sha256": "ae6a5060bb66a082d0d129e075c32cfc084e5dd98e3f14630543b3c3da6c8dfd"
+      "sha256": "b4d2cf04bd39efecb87c9b58f156da352b9c9a7770833844d6fc0be8fea3f4ef"
     },
     {
       "name": "Demo.gs",
@@ -12,7 +12,7 @@
     },
     {
       "name": "Index.html",
-      "sha256": "6eb5587fd9e6243011ae33643aec2994b82908da00db20e2e5b4435895a3f71d"
+      "sha256": "0eeed99aa213f8a1218ac25b23078489af970c9c119cad6ed20f774962458db9"
     },
     {
       "name": "Setup.html",
