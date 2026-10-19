@@ -1,10 +1,10 @@
 {
-  "version": "20261019.1432",
-  "note": "교외체험학습 신청서·결과보고서 + 아이콘 색",
+  "version": "20261019.1541",
+  "note": "체험학습 연간 19일 한도",
   "files": [
     {
       "name": "Code.gs",
-      "sha256": "b4d2cf04bd39efecb87c9b58f156da352b9c9a7770833844d6fc0be8fea3f4ef"
+      "sha256": "27ebe1dab475e163cf61a0b6bad3ae90ae9d69c4338ac80f55a105be06620cae"
     },
     {
       "name": "Demo.gs",
@@ -12,7 +12,7 @@
     },
     {
       "name": "Index.html",
-      "sha256": "0eeed99aa213f8a1218ac25b23078489af970c9c119cad6ed20f774962458db9"
+      "sha256": "66930d452863fec86660526a38965e6b6439cda05b1ca7433b34c8fb0e9e644f"
     },
     {
       "name": "Setup.html",

@@ -3207,7 +3207,11 @@ function apiTrips(token) {
   const all = tripRows_().rows;
   const mine = all.filter(function (r) { return normId_(r[TR.SID]) === sid; }).map(function (r) { return tripView_(r, all); })
     .sort(function (a, b) { return a.from < b.from ? 1 : -1; });
-  return { ok: true, trips: mine, info: tripInfo_(s.v, course) };
+  const year = Utilities.formatDate(new Date(), TZ, 'yyyy');
+  const usedYear = mine.filter(function (t) { return t.state !== '반려' && t.from.slice(0, 4) === year; }).reduce(function (a, t) { return a + t.days; }, 0);
+  const info = tripInfo_(s.v, course);
+  info.usedYear = usedYear; info.leftYear = Math.max(0, TRIP_YEAR_LIMIT - usedYear);
+  return { ok: true, trips: mine, info: info };
 }
 
 /** 신청서 저장 (새로 내기·고치기). 승인된 뒤에는 고칠 수 없다. */
@@ -3254,6 +3258,14 @@ function apiTripSave(token, id, d) {
   lock.waitLock(20000);
   try {
     const t = tripRows_();
+    // 연간 출석인정 한도: 같은 해에 승인됐거나 확인을 기다리는 다른 체험학습 일수 + 이번 일수
+    const year = from.slice(0, 4);
+    const usedYear = t.rows.filter(function (r) {
+      return normId_(r[TR.SID]) === sid && String(r[TR.ID]) !== String(id || '') && String(r[TR.STATE]) !== '반려' && attDate_(r[TR.FROM]).slice(0, 4) === year;
+    }).reduce(function (a, r) { return a + (Number(r[TR.DAYS]) || 0); }, 0);
+    if (usedYear + days > TRIP_YEAR_LIMIT) {
+      return fail_('연간 ' + TRIP_YEAR_LIMIT + '일을 넘습니다. 올해 이미 ' + usedYear + '일을 신청·사용해서 ' + Math.max(0, TRIP_YEAR_LIMIT - usedYear) + '일까지만 낼 수 있어요.');
+    }
     let row, tid = String(id || '');
     if (tid) {
       const at = t.rows.map(function (r) { return String(r[TR.ID]); }).indexOf(tid);

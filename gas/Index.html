@@ -2354,7 +2354,7 @@
     if (trip.view === 'form') return drawTripForm(box);
     if (trip.view === 'report') return drawTripReport(box);
     var top = el('div', 'summary');
-    var c = el('div'); c.appendChild(el('strong', '', '교외체험학습')); c.appendChild(el('span', '', ' 연간 ' + d.info.limit + '일까지 출석 인정')); top.appendChild(c);
+    var c = el('div'); c.appendChild(el('strong', '', '올해 남은 날 ' + d.info.leftYear + '일')); c.appendChild(el('span', '', ' / 연간 ' + d.info.limit + '일 (평일 기준)')); top.appendChild(c);
     var tools = el('div', 'tools'); tools.appendChild(button('', '+ 신청서 쓰기', function () { trip.edit = null; trip.view = 'form'; draw(); window.scrollTo(0, 0); })); top.appendChild(tools);
     box.appendChild(top);
     box.appendChild(el('p', 'hint', '칸을 채우면 학교 신청서 양식에 그대로 들어갑니다. 선생님이 승인하면 다녀와서 결과보고서를 씁니다.\n신청서는 3일 전까지, 보고서는 다녀온 뒤 10일 안에 내 주세요.'));
