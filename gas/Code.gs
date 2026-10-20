@@ -1390,7 +1390,7 @@ function baseName_(task, id, name) { return id + '_' + clean_(name) + '_' + clea
 
 /* ───────────── 교사 화면 ───────────── */
 
-function apiTeacherLogin(password) {
+function apiTeacherLogin(password, remember) {
   const cache = CacheService.getScriptCache();
   if (Number(cache.get('tfail') || 0) >= MAX_FAILS) return fail_('여러 번 틀려 잠겨 있습니다. ' + LOCK_MINUTES + '분 뒤에 다시 시도해 주세요.');
   const props = PropertiesService.getScriptProperties();
@@ -1404,7 +1404,50 @@ function apiTeacherLogin(password) {
   const token = Utilities.getUuid() + Utilities.getUuid().replace(/-/g, '');
   cache.put('tsess:' + token, '1', SESSION_SECONDS);
   log_('', '교사', '교사 로그인', '');
-  return { ok: true, token: token, board: teacherBoard_() };
+  return { ok: true, token: token, device: remember === true ? newTeacherDevice_() : '', board: teacherBoard_() };
+}
+
+/* 이 기기 기억하기: 선생님 폰에 긴 열쇠를 하나 두고, 앱을 열 때마다 그걸로 바로 들어온다 (비밀번호 다시 안 침).
+   시트 쪽에는 열쇠의 지문(해시)만 남긴다. 60일 동안 안 쓰면 끝나고, 쓸 때마다 늘어난다. */
+const DEVICE_DAYS = 60, DEVICE_MAX = 6;
+function teacherDevices_() { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('T_DEVICES') || '{}') || {}; } catch (e) { return {}; } }
+function saveTeacherDevices_(m) {
+  const now = Date.now();
+  const keys = Object.keys(m).filter(function (k) { return m[k] > now; }).sort(function (a, b) { return m[b] - m[a]; }).slice(0, DEVICE_MAX);
+  const out = {};
+  keys.forEach(function (k) { out[k] = m[k]; });
+  PropertiesService.getScriptProperties().setProperty('T_DEVICES', JSON.stringify(out));
+}
+function newTeacherDevice_() {
+  const key = 'D' + Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
+  const m = teacherDevices_();
+  m[sha256Hex_(key)] = Date.now() + DEVICE_DAYS * 864e5;
+  saveTeacherDevices_(m);
+  return key;
+}
+/** 기억한 기기로 다시 들어오기. want가 {course, view:'attend'}면 그 수업 오늘 출결까지 한 번에 돌려준다 (왕복을 줄이려고). */
+function apiTeacherResume(device, want) {
+  device = String(device || '');
+  if (!/^D[0-9a-f]{64}$/.test(device)) return fail_('다시 로그인해 주세요.');
+  const h = sha256Hex_(device), m = teacherDevices_();
+  if (!m[h] || m[h] < Date.now()) return fail_('로그인이 만료됐어요. 비밀번호로 다시 들어와 주세요.');
+  if (m[h] - Date.now() < (DEVICE_DAYS - 1) * 864e5) { m[h] = Date.now() + DEVICE_DAYS * 864e5; saveTeacherDevices_(m); } // 하루에 한 번만 연장 기록
+  const token = Utilities.getUuid() + Utilities.getUuid().replace(/-/g, '');
+  CacheService.getScriptCache().put('tsess:' + token, '1', SESSION_SECONDS);
+  const out = { ok: true, token: token, board: teacherBoard_() };
+  if (want && typeof want === 'object' && want.course && want.view === 'attend') {
+    const day = apiTeacherAttendDay(token, String(want.course), Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd'));
+    if (day && day.ok) { out.att = day; out.attCourse = String(want.course); }
+  }
+  return out;
+}
+function apiTeacherForget(device) {
+  device = String(device || '');
+  if (!device) return { ok: true };
+  const m = teacherDevices_();
+  delete m[sha256Hex_(device)];
+  saveTeacherDevices_(m);
+  return { ok: true };
 }
 
 function isTeacher_(token) { return !!token && CacheService.getScriptCache().get('tsess:' + token) === '1'; }

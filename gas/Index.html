@@ -421,6 +421,8 @@
   .tf textarea { width: 100%; box-sizing: border-box; min-height: 90px; padding: 12px; border: 0; border-radius: 10px; background: var(--fill); font: inherit; font-size: 16px; color: var(--ink); resize: vertical; }
   .tf .field input, .tf .field select { width: 100%; box-sizing: border-box; }
   .tf .field select { height: 46px; padding: 0 12px; border: 0; border-radius: 10px; background: var(--fill); font: inherit; font-size: 16px; color: var(--ink); }
+  .remember { display: flex; gap: 8px; align-items: center; margin: 12px 0 0; font-size: 14px; color: var(--sub); cursor: pointer; }
+  .remember input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
   .tf .chk { display: flex; gap: 10px; align-items: flex-start; margin: 4px 0 14px; font-size: 15px; line-height: 1.45; cursor: pointer; }
   .tf .chk input { flex: none; width: 22px; height: 22px; margin: 0; accent-color: var(--accent); }
   .plan-row { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 4px; }
@@ -712,6 +714,7 @@
       <label class="field"><span>비밀번호</span>
         <input id="tpw" type="password" maxlength="40">
       </label>
+      <label class="remember"><input type="checkbox" id="tremember" checked><span>이 기기에서 로그인 유지 (60일)</span></label>
       <button class="btn" type="submit">들어가기</button>
       <button class="link" type="button" data-back>학생 로그인으로</button>
     </form>
@@ -781,6 +784,8 @@
 
   var $ = function (id) { return document.getElementById(id); };
   var TOKEN_KEY = 'cls_token', TTOKEN_KEY = 'cls_ttoken', WHO_KEY = 'cls_who';
+  var TDEV_KEY = 'cls_tdev', TLAST_KEY = 'cls_tlast', TCLASS_KEY = 'cls_tclass'; // 선생님: 기억한 기기 열쇠, 마지막으로 본 화면, 담임 반 ID
+  var WANT_ATT = /^\/att\b/.test(location.pathname) || /[?&#]att\b/.test(location.search + location.hash); // 출결 바로가기로 열었는지
   var MB = 1024 * 1024;
   var REFS = document.body.getAttribute('data-refs') || '자료'; // 세 번째 탭 이름 (설정에서 정한다)
   /* 받침에 맞는 조사: josa('자료', '이', '가') → '자료가' */
@@ -975,11 +980,12 @@
   submit($('f-teacher'), function () {
     var pw = $('tpw').value;
     if (!pw) { say('비밀번호를 입력해 주세요.'); return null; }
-    return call('apiTeacherLogin', pw).then(function (res) {
+    return call('apiTeacherLogin', pw, $('tremember').checked).then(function (res) {
       $('tpw').value = '';
       if (!res.ok) return res;
       ttoken = res.token;
       keep(sessionStorage, TTOKEN_KEY, ttoken);
+      if (res.device) keep(localStorage, TDEV_KEY, res.device);
       startTeacher(res.board);
       return res;
     });
@@ -1009,6 +1015,8 @@
     keep(sessionStorage, TOKEN_KEY, null);
     keep(sessionStorage, TTOKEN_KEY, null);
     if (old) call('apiLogout', old).catch(function () {});
+    var dev = recall(localStorage, TDEV_KEY);
+    if (dev) { keep(localStorage, TDEV_KEY, null); call('apiTeacherForget', dev).catch(function () {}); } // 로그아웃하면 기억도 지운다
     closeSheet();
     showAuth();
     if (message) say(message);
@@ -2074,11 +2082,23 @@
   }
 
   /* ═════════════ 교사 화면 ═════════════ */
-  function startTeacher(b) {
+  function startTeacher(b, pre) {
     board = b;
     var withTask = board.courses.filter(function (c) { return fromCourse(board.tasks, c.id).length; })[0];
     tCourse = (withTask || board.courses[0] || {}).id || null;
     tTask = null;
+    var cls = board.courses.filter(function (c) { return c.kind === 'class'; })[0];
+    keep(localStorage, TCLASS_KEY, cls ? cls.id : null);
+    // 마지막으로 보던 화면으로 다시 연다. 출결 바로가기로 열었으면 담임 반 오늘 출결로.
+    var last = null;
+    try { last = JSON.parse(recall(localStorage, TLAST_KEY) || 'null'); } catch (e) {}
+    if (WANT_ATT && cls) last = { course: cls.id, view: 'attend' };
+    if (last && courseById(board.courses, last.course)) {
+      tCourse = last.course;
+      if ($('tseg').querySelector('[data-tview="' + last.view + '"]')) tView = last.view;
+      if (tView === 'attend') { att.mode = 'day'; att.date = ymd(new Date()); }
+    }
+    if (pre && pre.att && pre.attCourse === tCourse) att.pre = pre.att; // 들어오면서 같이 받아 온 오늘 출결
     var goT = function (id) { tCourse = id; tTask = null; tSurvey = null; drawTeacher(); window.scrollTo(0, 0); };
     buildNav($('tnav'), board.courses, false, goT);
     $('tnav').appendChild(el('span', 'nav-label', '전체'));
@@ -2105,6 +2125,7 @@
     $('tseg').hidden = true;
     if (tCourse === MEME_VIEW) return loadMemeAdmin();
     if (!course) { $('tTitle').textContent = '수업 없음'; $('tSub').textContent = ''; return; }
+    keep(localStorage, TLAST_KEY, JSON.stringify({ course: tCourse, view: tView }));
     $('tSub').textContent = course.desc;
     $('tTitle').textContent = course.name;
     $('tseg').hidden = false;
@@ -2736,6 +2757,8 @@
     if (att.mode === 'month') return loadAttMonth(body);
     if (att.mode === 'neis') return loadAttNeis(body);
     if (att.mode === 'trips') return loadTeacherTrips(body);
+    if (att.pre && att.pre.date === att.date) { att.day = att.pre; att.pre = null; return drawAttDay(body); }
+    att.pre = null;
     fetchAttDay(body, att.date);
   }
   function fetchAttDay(body, date) {
@@ -4351,7 +4374,17 @@
   /* ── 시작 ── */
   ttoken = recall(sessionStorage, TTOKEN_KEY);
   token = recall(sessionStorage, TOKEN_KEY);
-  if (ttoken) {
+  var tdev = recall(localStorage, TDEV_KEY);
+  if (!ttoken && !token && tdev) {
+    // 기억한 기기: 비밀번호 없이 바로. 보던 화면이 출결이면 오늘 출결까지 한 번에 받아 온다.
+    var want = null;
+    try { want = JSON.parse(recall(localStorage, TLAST_KEY) || 'null'); } catch (e) {}
+    if (WANT_ATT) want = { course: recall(localStorage, TCLASS_KEY), view: 'attend' };
+    call('apiTeacherResume', tdev, want).then(function (res) {
+      if (res && res.ok) { ttoken = res.token; keep(sessionStorage, TTOKEN_KEY, ttoken); startTeacher(res.board, res); }
+      else { keep(localStorage, TDEV_KEY, null); showAuth(); step('f-teacher'); if (res && res.error) say(res.error); }
+    }).catch(showAuth);
+  } else if (ttoken) {
     call('apiTeacherBoard', ttoken).then(function (res) {
       if (res && res.ok) startTeacher(res.board);
       else { ttoken = null; keep(sessionStorage, TTOKEN_KEY, null); showAuth(); }

@@ -1,10 +1,10 @@
 {
-  "version": "20261019.1754",
-  "note": "출결 서류 사진 올리기, 학생용 주소 새 사이트로, 30499 정리",
+  "version": "20261021.0757",
+  "note": "선생님 기기 기억·출결 바로가기·화면 캐시로 빠르게 열기",
   "files": [
     {
       "name": "Code.gs",
-      "sha256": "96a25f63f4a58b278f2e0793bb97dd7bda40e71b4510980c147530afd81ece42"
+      "sha256": "0c6c8d96effbd8f64931d586c2a906d93555001decefa4fa96a8f8ac5e67658c"
     },
     {
       "name": "Demo.gs",
@@ -12,7 +12,7 @@
     },
     {
       "name": "Index.html",
-      "sha256": "98eee50e700b9264692c0b5abd30865b3b059d59921c42f9e0578cfbe6986406"
+      "sha256": "3a056268899c394d12e0016dcdbad7c1616f01b6ae9fb59d60605cf2717f0c13"
     },
     {
       "name": "Setup.html",
