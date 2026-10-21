@@ -1,10 +1,10 @@
 {
-  "version": "20261021.0757",
-  "note": "선생님 기기 기억·출결 바로가기·화면 캐시로 빠르게 열기",
+  "version": "20261021.1212",
+  "note": "메인 짤 투표 없앰: 선생님이 바로 고름",
   "files": [
     {
       "name": "Code.gs",
-      "sha256": "0c6c8d96effbd8f64931d586c2a906d93555001decefa4fa96a8f8ac5e67658c"
+      "sha256": "a0c56ad84e9bc3753df20e8f4dfe0dbcdef8e0a76c852ee95801ac71bc08fd05"
     },
     {
       "name": "Demo.gs",
@@ -12,7 +12,7 @@
     },
     {
       "name": "Index.html",
-      "sha256": "3a056268899c394d12e0016dcdbad7c1616f01b6ae9fb59d60605cf2717f0c13"
+      "sha256": "1f5992e24af2d21aeee254665458fe78b0428eaa4be0dafc23da213857dcfa73"
     },
     {
       "name": "Setup.html",

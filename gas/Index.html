@@ -1358,7 +1358,7 @@
       now.appendChild(tx);
       box.appendChild(now);
     }
-    if (mm.candidates.length) {
+    if (mm.candidates && mm.candidates.length) {
       box.appendChild(el('p', 'hint', '다음 메인 후보예요. 마음에 드는 하나를 누르면 한 표가 들어가요. 결과는 선생님만 봅니다.'));
       var grid = el('div', 'meme-grid');
       grid.style.marginTop = '10px';
@@ -1376,7 +1376,7 @@
         grid.appendChild(card);
       });
       box.appendChild(grid);
-    } else if (!mm.main) {
+    } else {
       box.appendChild(el('p', 'hint', '로그인 화면에 걸릴 짤을 직접 만들어 올려 보세요. 선생님이 골라서 걸어 줍니다.'));
     }
     if (mm.mine.length) {
@@ -1384,7 +1384,7 @@
       mm.mine.forEach(function (x) {
         var chip = el('span');
         var im = el('img'); im.alt = ''; im.src = 'data:image/jpeg;base64,' + x.thumb; chip.appendChild(im);
-        chip.appendChild(document.createTextNode(x.state === '메인' ? '메인에 걸림' : x.state === '후보' ? '후보 · 투표 중' : '선생님 확인 중'));
+        chip.appendChild(document.createTextNode(x.state === '메인' ? '메인에 걸림' : '선생님 확인 중'));
         row.appendChild(chip);
       });
       box.appendChild(row);
@@ -1441,11 +1441,11 @@
     var show = toggleRow('이름 밝히기', teacher ? '켜면 "선생님 작품"으로 표시돼요. 끄면 누가 올렸는지 보이지 않아요.' : '켜면 걸릴 때 "' + (data && data.student ? data.student.grade + '학년 ' + data.student.cls + '반 ' + data.student.name : '반과 이름') + ' 작품"으로 보여요. 끄면 익명으로 걸려요.', false);
     showBox.appendChild(show);
     wrap.appendChild(showBox);
-    if (!teacher) wrap.appendChild(el('p', 'hint', '선생님이 확인한 뒤 후보로 올라가요. 직접 만든 짤일수록 좋아요.'));
+    if (!teacher) wrap.appendChild(el('p', 'hint', '선생님이 보고 골라서 걸어 줘요. 직접 만든 짤일수록 좋아요.'));
     wrap.appendChild(msg);
     if (teacher) {
       var tPair = el('div', 'pair');
-      [['후보로 올리기', '후보', 'btn quiet'], [teacher.pickLabel, '메인', 'btn']].forEach(function (o) {
+      [['올려 두기', '대기', 'btn quiet'], [teacher.pickLabel, '메인', 'btn']].forEach(function (o) {
         var b = button(o[2], o[0], function () {
           if (!picked) { msg.textContent = '먼저 그림을 골라 주세요.'; return; }
           tPair.querySelectorAll('button').forEach(function (x) { x.disabled = true; });
@@ -3222,28 +3222,17 @@
     setCard.appendChild(inner);
     box.appendChild(setCard);
 
-    // 검토 대기
-    var pending = by('대기');
-    box.appendChild(el('h3', 'group-title', '확인할 짤 ' + pending.length + '개'));
+    // 올라온 짤: 선생님이 바로 고른다 (예전 '후보'도 여기에 같이)
+    var pending = by('대기').concat(by('후보'));
+    box.appendChild(el('h3', 'group-title', '올라온 짤 ' + pending.length + '개'));
     var pl = el('div', 'list');
     pending.forEach(function (m) {
       pl.appendChild(item(m, [['숨김', function () { memeAct('apiTeacherMemeState', [m.id, '숨김']); }],
-        ['후보로', function () { memeAct('apiTeacherMemeState', [m.id, '후보']); }, true]]));
+        [pickLabel, function () { memeAct('apiTeacherMemePick', [m.id]); }, true]]));
     });
     if (!pending.length) pl.appendChild(el('p', 'empty', '새로 올라온 짤이 없습니다.'));
     box.appendChild(pl);
-    if (pending.length) box.appendChild(el('p', 'hint', '후보로 올린 것만 학생들에게 보이고 투표를 받습니다.'));
-
-    // 후보 (표 많은 순)
-    var cands = by('후보').sort(function (a, b) { return b.votes - a.votes; });
-    box.appendChild(el('h3', 'group-title', '후보 ' + cands.length + '개 · 표는 선생님만 봅니다'));
-    var cl = el('div', 'list');
-    cands.forEach(function (m) {
-      cl.appendChild(item(m, [['내리기', function () { memeAct('apiTeacherMemeState', [m.id, '대기']); }],
-        [pickLabel, function () { memeAct('apiTeacherMemePick', [m.id]); }, true]], el('small', 'votes', m.votes + '표')));
-    });
-    if (!cands.length) cl.appendChild(el('p', 'empty', '투표 중인 후보가 없습니다.'));
-    box.appendChild(cl);
+    if (pending.length) box.appendChild(el('p', 'hint', '학생들에게는 안 보여요. 그림을 누르면 크게 볼 수 있어요.'));
 
     // 지난호, 숨김
     var past = by('지난호'), hidden = by('숨김');

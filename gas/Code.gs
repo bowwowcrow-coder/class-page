@@ -2092,12 +2092,8 @@ function studentMeme_(sid) {
     if (!id) return;
     const st = r[MM.STATE];
     if (st === '메인' && id === m.cur) { main = view(r); main.issue = Number(r[MM.ISSUE]) || m.issue; main.credit = creditOf_(r); }
-    if (st === '후보') {
-      const v = view(r);
-      candidates.push(v);
-      if (votesOf_(r).indexOf(sid) >= 0) myVote = id;
-    }
-    if (normId_(r[MM.SID]) === sid && st !== '지난호') { const v = view(r); v.state = st === '숨김' ? '대기' : st; mine.push(v); } // 숨김은 본인에게 '검토 중'으로만 보인다
+    // 투표는 없앴다: 선생님이 직접 고른다. 예전 '후보'는 학생에게 '확인 중'으로만 보인다
+    if (normId_(r[MM.SID]) === sid && st !== '지난호') { const v = view(r); v.state = st === '메인' ? '메인' : '대기'; mine.push(v); } // 숨김은 본인에게 '검토 중'으로만 보인다
   });
   const open = mine.filter(function (x) { return x.state === '대기' || x.state === '후보'; }).length;
   return { main: main, candidates: candidates, myVote: myVote, mine: mine.reverse().slice(0, 6), canSubmit: open < MEME_PENDING_MAX, max: MEME_PENDING_MAX };
@@ -2209,7 +2205,7 @@ function apiTeacherMemeUpload(token, img, thumb, caption, how, show) {
     for (let n = 2; used.indexOf(id) >= 0; n++) id = stamp + '-' + n;
     const file = memeFolder_().createFile(Utilities.newBlob(Utilities.base64Decode(img), 'image/jpeg', id + '_teacher.jpg'));
     const sh = sheet_(SHEET.MEMES);
-    sh.getRange(sh.getLastRow() + 1, 1, 1, MEME_HEADERS.length).setValues([[id, TEACHER_SID, '선생님', new Date(), caption, how === '후보' ? '후보' : '대기', '', file.getId(), thumb, '', show === true]]);
+    sh.getRange(sh.getLastRow() + 1, 1, 1, MEME_HEADERS.length).setValues([[id, TEACHER_SID, '선생님', new Date(), caption, '대기', '', file.getId(), thumb, '', show === true]]);
   } finally {
     lock.releaseLock();
   }
