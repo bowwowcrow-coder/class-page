@@ -231,6 +231,24 @@
 
   /* 공지 (수업 탭) */
   .notice { padding: 18px 20px; }
+  .n-files { display: grid; gap: 8px; margin-top: 12px; }
+  .n-imgs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .n-imgs.one { grid-template-columns: 1fr; }
+  .n-imgs a { display: block; overflow: hidden; border-radius: 10px; background: var(--fill); }
+  .n-imgs img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+  .n-imgs.one img { aspect-ratio: auto; max-height: 520px; object-fit: contain; }
+  .n-file { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); text-decoration: none; font-size: 15px; }
+  .n-file .ext, .n-erow .ext { flex: none; min-width: 38px; padding: 3px 6px; border-radius: 6px; background: var(--fill); color: var(--sub); font-size: 11px; font-weight: 700; text-align: center; }
+  .n-file .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .n-file small { flex: none; color: var(--sub); }
+  .open-body { padding: 0 20px 16px; }
+  .open-body .row-body { margin-top: 0; }
+  .n-edit { display: grid; gap: 6px; }
+  .n-erow { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 15px; }
+  .n-erow img { flex: none; width: 44px; height: 44px; border-radius: 8px; object-fit: cover; background: var(--fill); }
+  .n-erow .link { flex: none; width: auto; margin: 0; padding: 6px 4px; }
+  .n-erow .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .n-edit .btn.sm { width: auto; height: 40px; margin: 4px 0 0; padding: 0 16px; font-size: 15px; justify-self: start; }
   .notice-head { display: block; }
   .notice time { display: block; margin-top: 2px; }
   .notice h3 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.015em; }
@@ -1207,7 +1225,9 @@
     }).slice(0, 6);
     var nlist = el('div', 'list');
     latest.forEach(function (n) {
-      var body = el('p', 'row-body open-body', n.body || '내용이 없습니다.');
+      var body = el('div', 'open-body');
+      body.appendChild(el('p', 'row-body', n.body || ((n.files || []).length ? '' : '내용이 없습니다.')));
+      if ((n.files || []).length) body.appendChild(noticeAttach(n.files));
       body.hidden = true;
       var row = button('row', null, function () {
         body.hidden = !body.hidden;
@@ -1219,7 +1239,7 @@
       if (n.pinned) title.appendChild(el('span', 'pin-tag', '고정'));
       title.appendChild(document.createTextNode(n.title));
       text.appendChild(title);
-      text.appendChild(el('div', 'row-desc', (n.course ? courseName(n.course) : '전체 공지') + (n.date ? ', ' + n.date : '')));
+      text.appendChild(el('div', 'row-desc', (n.course ? courseName(n.course) : '전체 공지') + (n.date ? ', ' + n.date : '') + ((n.files || []).length ? ' · 첨부 ' + n.files.length : '')));
       row.appendChild(text);
       nlist.appendChild(row);
       nlist.appendChild(body);
@@ -1273,9 +1293,40 @@
       if (n.date) head.appendChild(el('time', '', n.date));
       item.appendChild(head);
       if (n.body) item.appendChild(el('p', '', n.body));
+      if ((n.files || []).length) item.appendChild(noticeAttach(n.files));
       list.appendChild(item);
     });
     box.appendChild(list);
+  }
+
+  /* 공지 첨부: 사진은 크게, 파일은 이름 줄로. 누르면 드라이브에서 열린다 (내려받기도 거기서). */
+  function driveView(id) { return 'https://drive.google.com/file/d/' + encodeURIComponent(id) + '/view'; }
+  function sizeText(b) { return !b ? '' : b >= MB ? (b / MB).toFixed(1) + 'MB' : Math.max(1, Math.round(b / 1024)) + 'KB'; }
+  function noticeAttach(files) {
+    var wrap = el('div', 'n-files');
+    var imgs = files.filter(function (f) { return f.k === 'img'; }), docs = files.filter(function (f) { return f.k !== 'img'; });
+    if (imgs.length) {
+      var g = el('div', 'n-imgs' + (imgs.length === 1 ? ' one' : ''));
+      imgs.forEach(function (f) {
+        var a = el('a'); a.href = driveView(f.id); a.target = '_blank'; a.rel = 'noopener';
+        var im = el('img'); im.alt = f.n; im.loading = 'lazy'; im.referrerPolicy = 'no-referrer';
+        im.src = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(f.id) + '&sz=w1200';
+        im.addEventListener('error', function () { a.textContent = '사진 보기: ' + f.n; a.className = 'n-file'; });
+        a.appendChild(im);
+        g.appendChild(a);
+      });
+      wrap.appendChild(g);
+    }
+    docs.forEach(function (f) {
+      var a = el('a', 'n-file'); a.href = driveView(f.id); a.target = '_blank'; a.rel = 'noopener';
+      var ext = (String(f.n).match(/\.([A-Za-z0-9]{1,5})$/) || [])[1] || '파일';
+      a.appendChild(el('span', 'ext', ext.toUpperCase()));
+      a.appendChild(el('span', 'nm', f.n));
+      if (f.s) a.appendChild(el('small', '', sizeText(f.s)));
+      wrap.appendChild(a);
+    });
+    wrap.addEventListener('click', function (e) { e.stopPropagation(); });
+    return wrap;
   }
 
   /* 레퍼런스 썸네일: 지정 이미지 → 사이트 아이콘 → 제목 첫 글자 */
@@ -3634,7 +3685,7 @@
         if (n.pinned) title.appendChild(el('span', 'pin-tag', '고정'));
         title.appendChild(document.createTextNode(n.title));
         text.appendChild(title);
-        text.appendChild(el('div', 'row-desc', (n.global ? '전체 공지' : (n.target || '수업 전체')) + (n.date ? ', ' + n.date : '') + (n.published ? '' : ', 미게시')));
+        text.appendChild(el('div', 'row-desc', (n.global ? '전체 공지' : (n.target || '수업 전체')) + (n.date ? ', ' + n.date : '') + ((n.files || []).length ? ', 첨부 ' + n.files.length : '') + (n.published ? '' : ', 미게시')));
         row.appendChild(text);
         row.appendChild(chevron());
         list.appendChild(row);
@@ -3744,6 +3795,44 @@
     if (target.selectedIndex < 0) target.value = '';
     wrap.appendChild(field('제목', title));
     wrap.appendChild(field('내용', body));
+    // 사진·파일 첨부: 고르는 즉시 드라이브에 올리고, 저장할 때 목록을 같이 넘긴다
+    var files = n && n.files ? n.files.slice() : [], busy = 0;
+    var fbox = el('div', 'n-edit');
+    var fmsg = el('p', 'hint', '');
+    var picker = el('input'); picker.type = 'file'; picker.multiple = true; picker.hidden = true;
+    var drawFiles = function () {
+      fbox.textContent = '';
+      files.forEach(function (f, k) {
+        var r = el('div', 'n-erow');
+        if (f.k === 'img') { var im = el('img'); im.alt = ''; im.referrerPolicy = 'no-referrer'; im.src = f.local || ('https://drive.google.com/thumbnail?id=' + encodeURIComponent(f.id) + '&sz=w200'); r.appendChild(im); }
+        else r.appendChild(el('span', 'ext', ((String(f.n).match(/\.([A-Za-z0-9]{1,5})$/) || [])[1] || '파일').toUpperCase()));
+        r.appendChild(el('span', 'nm', f.n));
+        r.appendChild(button('link', '빼기', function () { files.splice(k, 1); drawFiles(); }));
+        fbox.appendChild(r);
+      });
+      if (busy) fbox.appendChild(el('p', 'hint', busy + '개 올리는 중…'));
+      if (files.length < 10) fbox.appendChild(button('btn quiet sm', '+ 사진·파일 추가', function () { picker.click(); }));
+    };
+    picker.addEventListener('change', function () {
+      var list = [].slice.call(picker.files).slice(0, 10 - files.length);
+      picker.value = '';
+      list.forEach(function (file) {
+        busy++; drawFiles(); fmsg.textContent = '';
+        var isImg = /^image\//.test(file.type);
+        var job = isImg && file.size > 3 * MB
+          ? loadImage(fileUrl(file), file.name).then(function (img) { return { mime: 'image/jpeg', b64: shrink(img, 2400, 0.85), name: file.name.replace(/\.[^.]+$/, '') + '.jpg' }; })
+          : (file.size > 10 * MB ? Promise.reject(Object.assign(new Error(file.name + ': 10MB까지 올릴 수 있어요.'), { known: true })) : readBase64(file).then(function (b64) { return { mime: file.type || 'application/octet-stream', b64: b64, name: file.name }; }));
+        job.then(function (x) { return call('apiTeacherNoticeFile', ttoken, x.name, x.mime, x.b64); })
+          .then(function (res) { res = must(res); var f = res.file; if (isImg) f.local = fileUrl(file); files.push(f); if (res.shared === false) fmsg.textContent = '드라이브 공유 설정이 막혀 있어 학생에게 안 보일 수 있어요.'; })
+          .catch(function (err) { if (err && err.message !== 'expired') fmsg.textContent = friendly(err); })
+          .then(function () { busy--; drawFiles(); });
+      });
+    });
+    drawFiles();
+    var ff = el('div', 'field'); // label로 감싸면 안의 버튼을 눌렀을 때 파일 창이 두 번 열린다
+    ff.appendChild(el('span', '', '사진·파일'));
+    ff.appendChild(fbox); ff.appendChild(picker); ff.appendChild(fmsg);
+    wrap.appendChild(ff);
     wrap.appendChild(field('받는 학생', target));
     var toggles = el('div', 'list toggles');
     var pinned = toggleRow('상단 고정', '', n ? n.pinned : false);
@@ -3753,8 +3842,10 @@
     wrap.appendChild(toggles);
     formActions(wrap, !!n, function (msg) {
       if (!title.value.trim()) { msg.textContent = '제목을 입력해 주세요.'; return null; }
+      if (busy) { msg.textContent = '파일을 올리는 중이에요. 끝나면 저장해 주세요.'; return null; }
       return call('apiTeacherSaveNotice', ttoken, tCourse, { row: n ? n.row : 0, key: n ? n.key : '', global: target.value === '*',
-        title: title.value, body: body.value, target: target.value === '*' ? '' : target.value, pinned: pinned.isOn(), published: published.isOn() });
+        title: title.value, body: body.value, target: target.value === '*' ? '' : target.value, pinned: pinned.isOn(), published: published.isOn(),
+        files: files.map(function (f) { return { id: f.id, n: f.n, k: f.k, s: f.s }; }) });
     }, function () { return call('apiTeacherDeleteNotice', ttoken, tCourse, n.row, n.key); });
     openSheet(wrap);
     $('sheetBox').scrollTop = 0;

@@ -25,7 +25,7 @@ const CFG_HELP = {
 };
 // 설정 도우미가 생기기 전부터 쓰던 시트는 예전에 보이던 그대로 이어 간다
 const LEGACY = { school: '인천디자인고등학교', tab: '쉅', refsLabel: '레퍼런스' };
-const SCHEMA_VERSION = '19';            // 시트 구조가 바뀌는 업데이트마다 올린다 → 첫 접속 때 setup이 자동으로 돈다
+const SCHEMA_VERSION = '20';            // 시트 구조가 바뀌는 업데이트마다 올린다 → 첫 접속 때 setup이 자동으로 돈다
 const TZ = 'Asia/Seoul';
 const SHEET = { TRIPS: '체험학습', CHECKS: '체크', COURSES: '수업', STUDENTS: '학생', NOTICES: '공지', REFS: '레퍼런스', TASKS: '과제', SUBS: '제출', GRADES: '채점', ALLOW: '허용', LOG: '로그', CONFIG: '설정', START: '시작하기', SURVEYS: '설문', ANSWERS: '응답', MEMES: '메인짤', ATTEND: '출결' };
 
@@ -39,7 +39,7 @@ const TEXT_MAX = 3000;         // 글 칸 최대 글자 수 // 파일 하나의 
 
 const COURSE_HEADERS = ['수업ID', '수업명', '종류', '대상', '자동 배정 반', '사용'];
 const STUDENT_HEADERS = ['학번', '이름', '수업', '확인코드', 'PIN해시', '솔트', '실패횟수', '잠금해제시각', 'PIN설정일시', '최근로그인', '특이사항'];
-const NOTICE_HEADERS = ['작성일', '수업', '제목', '내용', '대상 반', '고정', '게시'];
+const NOTICE_HEADERS = ['작성일', '수업', '제목', '내용', '대상 반', '고정', '게시', '첨부'];
 const REF_HEADERS = ['수업', '분류', '제목', '설명', '링크', '게시', '이미지'];
 const TASK_HEADERS = ['과제ID', '수업', '제목', '설명', '정시마감', '최종마감', '게시', '제출 칸', '모아보기 공개', '모아보기 이름', '배점', '점수 공개', '체크 항목'];
 // 체크 항목: 학생이 올리지 않고 선생님이 항목마다 '냈다'를 표시하는 과제 (예: 실물 작품)
@@ -883,7 +883,8 @@ function readNotices_(ids, cls) {
       date: d ? Utilities.formatDate(d, TZ, 'yyyy.MM.dd') : '',
       title: String(r[2]).trim(),
       body: String(r[3] || '').trim(),
-      pinned: r[5] === true
+      pinned: r[5] === true,
+      files: noticeFiles_(r[7])
     };
   }).filter(Boolean).sort(function (a, b) {
     return (Number(b.pinned) - Number(a.pinned)) || (b.time - a.time);
@@ -2582,7 +2583,7 @@ function teacherPosts_(courseId) {
     if (!title || (!global && c !== courseId)) return;
     const d = r[0] instanceof Date ? r[0] : null;
     notices.push({ row: i + 2, key: noticeKey_(r), global: global, time: d ? d.getTime() : 0, date: d ? Utilities.formatDate(d, TZ, 'yyyy.MM.dd') : '',
-      title: title, body: String(r[3] || ''), target: String(r[4] || '').trim(), pinned: r[5] === true, published: r[6] === true });
+      title: title, body: String(r[3] || ''), target: String(r[4] || '').trim(), pinned: r[5] === true, published: r[6] === true, files: noticeFiles_(r[7]) });
   });
   notices.sort(function (a, b) { return (Number(b.pinned) - Number(a.pinned)) || (b.time - a.time); });
   const refs = [];
@@ -2620,12 +2621,41 @@ function apiTeacherSaveNotice(token, courseId, d) {
     } else {
       row = freeRow_(sh, 3);
     }
-    sh.getRange(row, 1, 1, NOTICE_HEADERS.length).setValues([[date, d.global ? '' : courseId, title, body, d.global ? '' : target, !!d.pinned, d.published !== false]]);
+    const files = cleanNoticeFiles_(d.files);
+    if (Number(d.row)) { // 고치면서 뺀 첨부는 드라이브에서도 치운다
+      const keep = files.map(function (f) { return f.id; });
+      noticeFiles_(sh.getRange(row, 8).getValue()).forEach(function (f) { if (keep.indexOf(f.id) < 0) trashFile_(f.id); });
+    }
+    sh.getRange(row, 1, 1, NOTICE_HEADERS.length).setValues([[date, d.global ? '' : courseId, title, body, d.global ? '' : target, !!d.pinned, d.published !== false, files.length ? JSON.stringify(files) : '']]);
   } finally {
     lock.releaseLock();
   }
   log_('', '교사', d.row ? '공지 수정' : '공지 작성', (d.global ? '전체' : courseId) + ' · ' + title);
   return teacherPosts_(courseId);
+}
+
+/* 공지 첨부: 사진·파일은 드라이브 '공지 첨부' 폴더에 두고, 링크가 있는 사람은 볼 수 있게 열어 둔다 (학생 화면에서 바로 보이게). */
+const NOTICE_FILE_MAX = 14000000; // base64 글자 수 (약 10MB)
+const NOTICE_FILES_MAX = 10;
+function noticeFiles_(v) {
+  try { const a = JSON.parse(String(v || '[]')); return Array.isArray(a) ? a.filter(function (f) { return f && f.id; }) : []; } catch (e) { return []; }
+}
+function cleanNoticeFiles_(list) {
+  return (Array.isArray(list) ? list : []).filter(function (f) { return f && /^[A-Za-z0-9_\-]+$/.test(String(f.id || '')); }).slice(0, NOTICE_FILES_MAX)
+    .map(function (f) { return { id: String(f.id), n: String(f.n || '파일').slice(0, 80), k: f.k === 'img' ? 'img' : 'file', s: Number(f.s) || 0 }; });
+}
+function trashFile_(id) { try { DriveApp.getFileById(String(id)).setTrashed(true); } catch (e) {} }
+function apiTeacherNoticeFile(token, name, mime, b64) {
+  if (!isTeacher_(token)) return expired_();
+  name = String(name || '파일').replace(/[\\\/:*?"<>|]+/g, '_').slice(0, 80);
+  mime = String(mime || 'application/octet-stream').slice(0, 100);
+  b64 = String(b64 || '');
+  if (!b64 || b64.length > NOTICE_FILE_MAX || !/^[A-Za-z0-9+\/=]+$/.test(b64)) return fail_('파일이 너무 크거나 읽을 수 없어요. 10MB까지 올릴 수 있어요.');
+  const bytes = Utilities.base64Decode(b64);
+  const file = childFolder_(rootFolder_(), '공지 첨부').createFile(Utilities.newBlob(bytes, mime, name));
+  let shared = true;
+  try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (e) { shared = false; }
+  return { ok: true, shared: shared, file: { id: file.getId(), n: name, k: /^image\//.test(mime) ? 'img' : 'file', s: bytes.length } };
 }
 
 function apiTeacherDeleteNotice(token, courseId, row, key) {
@@ -2635,6 +2665,7 @@ function apiTeacherDeleteNotice(token, courseId, row, key) {
   const cur = sh.getRange(row, 1, 1, NOTICE_HEADERS.length).getValues()[0];
   if (row < 2 || noticeKey_(cur) !== key) return fail_(CHANGED_MSG);
   sh.getRange(row, 1, 1, NOTICE_HEADERS.length).clearContent();
+  noticeFiles_(cur[7]).forEach(function (f) { trashFile_(f.id); });
   log_('', '교사', '공지 삭제', String(cur[2]));
   return teacherPosts_(String(courseId));
 }

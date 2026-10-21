@@ -1,10 +1,10 @@
 {
-  "version": "20261021.1253",
-  "note": "체험학습 문서: 학교 원본 양식 위에 글자만 얹기, 1장 고정",
+  "version": "20261022.0823",
+  "note": "공지에 사진·파일 첨부",
   "files": [
     {
       "name": "Code.gs",
-      "sha256": "a0c56ad84e9bc3753df20e8f4dfe0dbcdef8e0a76c852ee95801ac71bc08fd05"
+      "sha256": "beb4ced0aee276991d08fc4d49d0539337f26214f78193fc526f88d4fd8d95f5"
     },
     {
       "name": "Demo.gs",
@@ -12,7 +12,7 @@
     },
     {
       "name": "Index.html",
-      "sha256": "d306ca8f697e4aa75d652a9239e5ddd4215c993efd3db754eb0c2d5d1a5cbb1c"
+      "sha256": "c9e5fe634e6d69125da09d04ac62f017ce1219cb3068f3dfc5a4e0706c89703c"
     },
     {
       "name": "Setup.html",
