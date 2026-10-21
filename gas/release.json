@@ -1,6 +1,6 @@
 {
-  "version": "20261021.1212",
-  "note": "메인 짤 투표 없앰: 선생님이 바로 고름",
+  "version": "20261021.1253",
+  "note": "체험학습 문서: 학교 원본 양식 위에 글자만 얹기, 1장 고정",
   "files": [
     {
       "name": "Code.gs",
@@ -12,7 +12,7 @@
     },
     {
       "name": "Index.html",
-      "sha256": "1f5992e24af2d21aeee254665458fe78b0428eaa4be0dafc23da213857dcfa73"
+      "sha256": "d306ca8f697e4aa75d652a9239e5ddd4215c993efd3db754eb0c2d5d1a5cbb1c"
     },
     {
       "name": "Setup.html",
