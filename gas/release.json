@@ -1,10 +1,10 @@
 {
-  "version": "20261022.0823",
-  "note": "공지에 사진·파일 첨부",
+  "version": "20261022.1201",
+  "note": "공지 첨부를 앱을 거쳐 열기",
   "files": [
     {
       "name": "Code.gs",
-      "sha256": "beb4ced0aee276991d08fc4d49d0539337f26214f78193fc526f88d4fd8d95f5"
+      "sha256": "3b1a1e938610e47d7fc79f67d070cb040e1f36e60899f2dfdc304807883ce6bc"
     },
     {
       "name": "Demo.gs",
@@ -12,7 +12,7 @@
     },
     {
       "name": "Index.html",
-      "sha256": "c9e5fe634e6d69125da09d04ac62f017ce1219cb3068f3dfc5a4e0706c89703c"
+      "sha256": "d6c836faba37a4bd39c1ff672055856b09ee959c142e3f50aec1ae5be43de4a9"
     },
     {
       "name": "Setup.html",

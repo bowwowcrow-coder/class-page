@@ -2645,6 +2645,21 @@ function cleanNoticeFiles_(list) {
     .map(function (f) { return { id: String(f.id), n: String(f.n || '파일').slice(0, 80), k: f.k === 'img' ? 'img' : 'file', s: Number(f.s) || 0 }; });
 }
 function trashFile_(id) { try { DriveApp.getFileById(String(id)).setTrashed(true); } catch (e) {} }
+/** 공지 첨부를 앱 안에서 열기: 드라이브 로그인·공유 설정과 상관없이 받아 간다. 공지에 붙은 파일만 열 수 있다. */
+function apiNoticeFileGet(token, id) {
+  if (!sessionStudent_(token) && !isTeacher_(token)) return expired_();
+  id = String(id || '');
+  const ok = rows_(SHEET.NOTICES, NOTICE_HEADERS.length).some(function (r) {
+    return String(r[2]).trim() && noticeFiles_(r[7]).some(function (f) { return f.id === id; });
+  });
+  if (!ok) return fail_('지워졌거나 없는 파일이에요.');
+  try {
+    const f = DriveApp.getFileById(id), blob = f.getBlob();
+    return { ok: true, name: f.getName(), mime: blob.getContentType() || 'application/octet-stream', b64: Utilities.base64Encode(blob.getBytes()) };
+  } catch (e) {
+    return fail_('파일을 열 수 없어요. 드라이브에서 지워졌을 수 있어요.');
+  }
+}
 function apiTeacherNoticeFile(token, name, mime, b64) {
   if (!isTeacher_(token)) return expired_();
   name = String(name || '파일').replace(/[\\\/:*?"<>|]+/g, '_').slice(0, 80);

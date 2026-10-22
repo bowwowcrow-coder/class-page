@@ -232,6 +232,7 @@
   /* 공지 (수업 탭) */
   .notice { padding: 18px 20px; }
   .n-files { display: grid; gap: 8px; margin-top: 12px; }
+  .n-big { display: block; width: 100%; max-height: 70vh; object-fit: contain; border-radius: 10px; background: var(--fill); }
   .n-imgs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
   .n-imgs.one { grid-template-columns: 1fr; }
   .n-imgs a { display: block; overflow: hidden; border-radius: 10px; background: var(--fill); }
@@ -1302,6 +1303,39 @@
   /* 공지 첨부: 사진은 크게, 파일은 이름 줄로. 누르면 드라이브에서 열린다 (내려받기도 거기서). */
   function driveView(id) { return 'https://drive.google.com/file/d/' + encodeURIComponent(id) + '/view'; }
   function sizeText(b) { return !b ? '' : b >= MB ? (b / MB).toFixed(1) + 'MB' : Math.max(1, Math.round(b / 1024)) + 'KB'; }
+  // 첨부는 드라이브 링크 대신 앱(서버)을 거쳐 받아 온다: 학교 계정 로그인·공유 설정 때문에 드라이브에서 안 열리는 경우가 있다
+  var noticeCache = {};
+  function fetchNoticeFile(f) {
+    if (noticeCache[f.id]) return Promise.resolve(noticeCache[f.id]);
+    return call('apiNoticeFileGet', token || ttoken, f.id).then(function (res) {
+      res = must(res);
+      var bin = atob(res.b64), arr = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      var blob = new Blob([arr], { type: res.mime });
+      return (noticeCache[f.id] = { url: URL.createObjectURL(blob), name: res.name || f.n, mime: res.mime, blob: blob });
+    });
+  }
+  function openNoticeFile(f) {
+    var w = el('div');
+    w.appendChild(el('h3', '', f.n));
+    var body = el('div'); spin(body); w.appendChild(body);
+    var pair = el('div', 'pair');
+    pair.appendChild(button('btn quiet', '닫기', closeSheet));
+    w.appendChild(pair);
+    openSheet(w);
+    fetchNoticeFile(f).then(function (x) {
+      body.textContent = '';
+      if (/^image\//.test(x.mime)) { var im = el('img', 'n-big'); im.alt = x.name; im.src = x.url; body.appendChild(im); }
+      else body.appendChild(el('p', 'hint', (sizeText(f.s) ? sizeText(f.s) + ' · ' : '') + '아래 버튼으로 열거나 저장하세요.'));
+      var open = el('a', 'btn'); open.href = x.url; open.target = '_blank'; open.rel = 'noopener'; open.textContent = /pdf/.test(x.mime) ? '열기' : '열기';
+      open.style.cssText = 'display:flex;align-items:center;justify-content:center;text-decoration:none';
+      var save = el('a', 'btn quiet'); save.href = x.url; save.download = x.name; save.textContent = '저장';
+      save.style.cssText = 'display:flex;align-items:center;justify-content:center;text-decoration:none';
+      pair.textContent = '';
+      pair.appendChild(save); pair.appendChild(open);
+      w.appendChild(button('link', '닫기', closeSheet));
+    }).catch(function (err) { body.textContent = ''; if (err && err.message !== 'expired') body.appendChild(el('p', 'empty', friendly(err))); });
+  }
   function noticeAttach(files) {
     var wrap = el('div', 'n-files');
     var imgs = files.filter(function (f) { return f.k === 'img'; }), docs = files.filter(function (f) { return f.k !== 'img'; });
@@ -1309,9 +1343,14 @@
       var g = el('div', 'n-imgs' + (imgs.length === 1 ? ' one' : ''));
       imgs.forEach(function (f) {
         var a = el('a'); a.href = driveView(f.id); a.target = '_blank'; a.rel = 'noopener';
+        a.addEventListener('click', function (e) { e.preventDefault(); openNoticeFile(f); });
         var im = el('img'); im.alt = f.n; im.loading = 'lazy'; im.referrerPolicy = 'no-referrer';
         im.src = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(f.id) + '&sz=w1200';
-        im.addEventListener('error', function () { a.textContent = '사진 보기: ' + f.n; a.className = 'n-file'; });
+        im.addEventListener('error', function () { // 드라이브 미리보기가 막히면 앱을 거쳐 받아 온다
+          if (im.dataset.tried) { a.textContent = '사진 보기: ' + f.n; a.className = 'n-file'; return; }
+          im.dataset.tried = '1';
+          fetchNoticeFile(f).then(function (x) { im.src = x.url; }).catch(function () { a.textContent = '사진 보기: ' + f.n; a.className = 'n-file'; });
+        });
         a.appendChild(im);
         g.appendChild(a);
       });
@@ -1319,6 +1358,7 @@
     }
     docs.forEach(function (f) {
       var a = el('a', 'n-file'); a.href = driveView(f.id); a.target = '_blank'; a.rel = 'noopener';
+      a.addEventListener('click', function (e) { e.preventDefault(); openNoticeFile(f); });
       var ext = (String(f.n).match(/\.([A-Za-z0-9]{1,5})$/) || [])[1] || '파일';
       a.appendChild(el('span', 'ext', ext.toUpperCase()));
       a.appendChild(el('span', 'nm', f.n));
@@ -3806,7 +3846,14 @@
         var r = el('div', 'n-erow');
         if (f.k === 'img') { var im = el('img'); im.alt = ''; im.referrerPolicy = 'no-referrer'; im.src = f.local || ('https://drive.google.com/thumbnail?id=' + encodeURIComponent(f.id) + '&sz=w200'); r.appendChild(im); }
         else r.appendChild(el('span', 'ext', ((String(f.n).match(/\.([A-Za-z0-9]{1,5})$/) || [])[1] || '파일').toUpperCase()));
-        r.appendChild(el('span', 'nm', f.n));
+        var nm = el('a', 'nm', f.n); nm.href = '#';
+        nm.addEventListener('click', function (e) { // 새 창을 먼저 열어 두고 받아 오면 채운다 (팝업 차단 피하기)
+          e.preventDefault();
+          if (f.local) { window.open(f.local, '_blank'); return; }
+          var win = window.open('', '_blank');
+          fetchNoticeFile(f).then(function (x) { if (win) win.location.href = x.url; }).catch(function (err) { if (win) win.close(); fmsg.textContent = friendly(err); });
+        });
+        r.appendChild(nm);
         r.appendChild(button('link', '빼기', function () { files.splice(k, 1); drawFiles(); }));
         fbox.appendChild(r);
       });
