@@ -1,10 +1,10 @@
 {
-  "version": "20261022.1201",
-  "note": "공지 첨부를 앱을 거쳐 열기",
+  "version": "20261023.0919",
+  "note": "10805 이름 김시호로 되돌림",
   "files": [
     {
       "name": "Code.gs",
-      "sha256": "3b1a1e938610e47d7fc79f67d070cb040e1f36e60899f2dfdc304807883ce6bc"
+      "sha256": "360ad436e58c95055726dfb22b95b2889fc110b2545562feeaded079cc752a03"
     },
     {
       "name": "Demo.gs",

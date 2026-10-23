@@ -3189,6 +3189,7 @@ function autoSyncTick() {
   try { onceWebUrl_(); } catch (e) {}
   try { onceTestStudent_(); } catch (e) { try { diagRow_('테스트 학생 실패', e.message); } catch (x) {} }
   try { onceCleanup5_(); } catch (e) { try { diagRow_('정리 실패', e.message); } catch (x) {} }
+  try { onceFixName6_(); } catch (e) { try { diagRow_('이름 고침 실패', e.message); } catch (x) {} }
   try { onceCheckTask_(); } catch (e) { try { diagRow_('체크 과제 실패', e.message); } catch (x) {} }
   try { onceTasks_(); } catch (e) { syncLog_('정리 실패: ' + e.message); try { diagRow_('동아리 추가 실패', e.message); } catch (x) {} }
   try {
@@ -3580,4 +3581,14 @@ function onceCleanup5_() {
     if (normId_(rows[i][0]) === '30499' && String(rows[i][1]).trim() === '테스트학생') { sh.deleteRow(i + 2); gone++; }
   }
   diagRow_('정리', '학생용 주소 → total-page.pages.dev, 30499 테스트학생 ' + (gone ? '지움' : '없음'));
+}
+
+/** 한 번만: 10805 이름이 '강시호'로 잘못 바뀌어 로그인이 안 되던 것을 원래 이름 '김시호'로 */
+function onceFixName6_() {
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty('ONCE6_DONE') === 'v1') return;
+  props.setProperty('ONCE6_DONE', 'v1');
+  const s = findStudent_('10805');
+  if (s && String(s.v[C.NAME]).trim() === '강시호') { s.sh.getRange(s.row, C.NAME + 1).setValue('김시호'); diagRow_('이름 고침', '10805 강시호 → 김시호'); }
+  else diagRow_('이름 고침', '10805가 이미 다른 이름이라 그대로 둠');
 }
