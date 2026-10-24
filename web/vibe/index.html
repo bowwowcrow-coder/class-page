@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="/favicon-64.png">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>바이브코딩 실습 가이드</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* 레이아웃: 상단 60분 타임 눈금자 + 세로 단계 카드. 트랙(게임/웹)에 따라 강조색만 바뀜 */
+:root{
+  --bg:#EEF1F4; --panel:#FFFFFF; --ink:#18212B; --sub:#5B6774; --line:#D3DAE2;
+  --game:#C8325F; --web:#2856D8; --acc:var(--game); --accSoft:#F8E3EA;
+  --ok:#1F8A5B; --code:#F4F6F9;
+  --fDisp:"Black Han Sans","Apple SD Gothic Neo",sans-serif;
+  --fBody:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --fMono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12171D; --panel:#1A2129; --ink:#E6EBF0; --sub:#93A0AD; --line:#2C3640;
+  --game:#F0668F; --web:#6F93FF; --accSoft:#3A1F29; --ok:#4CC28C; --code:#141A20; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12171D; --panel:#1A2129; --ink:#E6EBF0; --sub:#93A0AD; --line:#2C3640;
+  --game:#F0668F; --web:#6F93FF; --accSoft:#3A1F29; --ok:#4CC28C; --code:#141A20; color-scheme:dark}
+body.web{--acc:var(--web)}
+body.web{--accSoft:#E1E8FB}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) body.web{--accSoft:#1D2747}}
+:root[data-theme="dark"] body.web{--accSoft:#1D2747}
+
+body{background:var(--bg);color:var(--ink);font:400 15px/1.65 var(--fBody);
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:24px 24px;background-attachment:fixed}
+.wrap{max-width:860px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 64px;display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{text-wrap:balance;margin:0}
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.top h1{font:400 clamp(30px,6vw,44px)/1.05 var(--fDisp);letter-spacing:-.5px}
+.top h1 span{color:var(--acc)}
+.top p{margin:6px 0 0;color:var(--sub)}
+.eyebrow{font:600 11px/1 var(--fMono);letter-spacing:.12em;text-transform:uppercase;color:var(--sub)}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px}
+.tracks{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tk{all:unset;cursor:pointer;border:2px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--panel);display:flex;flex-direction:column;gap:2px}
+.tk b{font:400 22px/1.2 var(--fDisp)}
+.tk small{color:var(--sub);font-size:13px}
+.tk:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.tk[aria-pressed="true"]{border-color:var(--acc);background:var(--accSoft)}
+.tk[aria-pressed="true"] b{color:var(--acc)}
+
+.idea{display:flex;flex-direction:column;gap:12px}
+.idea h2{font:700 17px/1.3 var(--fBody)}
+.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.fields label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--sub);min-width:0}
+.fields input{font:500 15px/1.4 var(--fBody);color:var(--ink);background:var(--code);border:1px solid var(--line);border-radius:6px;padding:9px 10px;min-width:0}
+.fields input:focus{outline:2px solid var(--acc);border-color:transparent}
+.ex{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ex span{font-size:12px;color:var(--sub);margin-right:2px}
+.chip{all:unset;cursor:pointer;font-size:13px;padding:4px 10px;border:1px solid var(--line);border-radius:99px;background:var(--panel)}
+.chip:hover,.chip:focus-visible{border-color:var(--acc);color:var(--acc)}
+
+/* 60분 눈금자 */
+.ruler{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px 10px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.rhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
+.rhead b{font:600 13px/1 var(--fMono)}
+.rhead b em{font-style:normal;color:var(--acc)}
+.bar{display:flex;gap:3px;height:26px}
+.seg{all:unset;cursor:pointer;position:relative;border-radius:4px;background:var(--code);border:1px solid var(--line);overflow:hidden;min-width:0}
+.seg i{position:absolute;inset:0;background:var(--acc);transform-origin:left;transform:scaleX(0);transition:transform .3s}
+.seg.done i{transform:scaleX(1)}
+.seg.part i{transform:scaleX(var(--p,0));opacity:.55}
+.seg span{position:relative;font:600 11px/26px var(--fMono);padding-left:6px;white-space:nowrap;color:var(--sub)}
+.seg.done span{color:#fff}
+.seg:focus-visible{outline:2px solid var(--acc)}
+.ticks{display:flex;justify-content:space-between;font:400 10px/1 var(--fMono);color:var(--sub);margin-top:5px;font-variant-numeric:tabular-nums}
+
+/* 단계 */
+.steps{display:flex;flex-direction:column;gap:14px;counter-reset:s}
+.step{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;scroll-margin-top:110px}
+.step.cur{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
+.shead{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding:14px 18px;cursor:pointer}
+.num{font:400 28px/1 var(--fDisp);color:var(--acc);min-width:28px}
+.step.ok .num{color:var(--ok)}
+.shead h3{font:700 17px/1.35 var(--fBody)}
+.shead .goal{font-size:13px;color:var(--sub);margin-top:2px}
+.time{font:600 12px/1 var(--fMono);color:var(--sub);white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+.time .st{display:block;margin-top:6px;font-size:11px;color:var(--ok)}
+.sbody{padding:0 18px 18px 60px;display:flex;flex-direction:column;gap:14px}
+.step:not(.open) .sbody{display:none}
+.why{margin:0;color:var(--sub);font-size:14px;max-width:62ch}
+.todo{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.todo label{display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+.todo input{margin-top:5px;accent-color:var(--acc);width:17px;height:17px;flex-shrink:0}
+.todo input:checked+span{color:var(--sub);text-decoration:line-through}
+.prompt{border:1px solid var(--line);border-radius:8px;background:var(--code);overflow:hidden}
+.ptop{display:flex;justify-content:space-between;align-items:center;padding:7px 10px 7px 12px;border-bottom:1px solid var(--line)}
+.copy{all:unset;cursor:pointer;font:600 12px/1 var(--fBody);padding:6px 10px;border-radius:5px;background:var(--acc);color:#fff}
+.copy:focus-visible{outline:2px solid var(--ink)}
+.copy.did{background:var(--ok)}
+.prompt pre{margin:0;padding:12px;font:400 13px/1.7 var(--fMono);white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere}
+.prompt pre mark{background:var(--accSoft);color:var(--acc);border-radius:3px;padding:0 2px;font-weight:600}
+.tip{font-size:13.5px;border-left:3px solid var(--line);padding:2px 0 2px 12px;color:var(--sub);max-width:62ch}
+.tip b{color:var(--ink)}
+
+.sos h2{font:400 22px/1.2 var(--fDisp);margin-bottom:10px}
+.sosl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.sosl details{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--code);min-width:0}
+.sosl summary{cursor:pointer;font-weight:700;font-size:14px}
+.sosl details p{margin:8px 0 6px;font-size:13.5px;color:var(--sub)}
+.foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:var(--sub);font-size:13px}
+.reset{all:unset;cursor:pointer;text-decoration:underline}
+.reset.arm{color:var(--game);font-weight:700}
+
+@media (max-width:640px){
+  .fields{grid-template-columns:1fr}
+  .sbody{padding-left:18px}
+  .sosl{grid-template-columns:1fr}
+  .seg span{display:none}
+  .tk b{font-size:19px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">방과후 · 바이브코딩 실습 · 60분</div>
+      <h1>AI랑 <span id="ttl">게임</span> 만들기</h1>
+      <p>ChatGPT에게 말로 시키고, 실행해 보고, 고쳐 달라고 하는 걸 한 시간 동안 여섯 번 반복합니다.</p>
+    </div>
+  </header>
+
+  <div class="tracks" role="group" aria-label="만들 것 고르기">
+    <button class="tk" id="tk-game" data-t="game" aria-pressed="true"><b>게임</b><small>탭·클릭으로 하는 한 화면 게임</small></button>
+    <button class="tk" id="tk-web" data-t="web" aria-pressed="false"><b>웹페이지</b><small>소개·도감·포트폴리오 같은 한 장짜리 사이트</small></button>
+  </div>
+
+  <section class="panel idea" aria-labelledby="ideaH">
+    <h2 id="ideaH">내 아이디어 세 칸만 채우기</h2>
+    <div class="fields" id="fields"></div>
+    <div class="ex" id="examples"></div>
+  </section>
+
+  <div class="ruler" aria-label="진행 상황">
+    <div class="rhead"><span class="eyebrow">진행</span><b><em id="pct">0</em> / <span id="tot">0</span> 완료</b></div>
+    <div class="bar" id="bar"></div>
+    <div class="ticks"><span>0분</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>60분</span></div>
+  </div>
+
+  <div class="steps" id="steps"></div>
+
+  <section class="panel sos" aria-labelledby="sosH">
+    <h2 id="sosH">막혔을 때</h2>
+    <div class="sosl" id="sos"></div>
+  </section>
+
+  <div class="foot">
+    <span>체크한 내용은 이 기기에만 저장돼요.</span>
+    <button class="reset" id="reset">처음부터 다시</button>
+  </div>
+</div>
+
+<script>
+var DATA={
+ game:{
+  name:"게임",
+  fields:[["a","무슨 게임?","예: 떨어지는 과일 받기"],["b","조작은?","예: 좌우 화살표 / 화면 터치"],["c","언제 끝나?","예: 3개 놓치면 게임오버"]],
+  examples:[
+   ["과일 받기",["떨어지는 과일을 바구니로 받는 게임","좌우 화살표, 폰은 화면 왼쪽·오른쪽 터치","과일 3개 놓치면 게임오버"]],
+   ["색 찾기",["16칸 중 색이 살짝 다른 한 칸 찾기","칸을 클릭·터치","30초 안에 몇 개 찾는지"]],
+   ["반응속도",["화면이 초록으로 바뀌는 순간 누르기","아무 데나 클릭·터치","5번 평균 반응속도 기록"]],
+   ["운석 피하기",["위에서 내려오는 운석 피하기","마우스나 손가락으로 우주선 이동","부딪히면 끝, 버틴 시간이 점수"]]
+  ],
+  steps:[
+   {t:"아이디어를 한 문장으로",m:[0,5],goal:"누가, 뭘 하고, 언제 끝나는지",
+    why:"ChatGPT는 애매하게 말하면 애매하게 만들어요. 위의 세 칸을 채우면 다음 단계 요청문이 자동으로 완성됩니다.",
+    todo:["위의 세 칸 채우기","옆 사람한테 10초 안에 설명해 보기"],
+    tip:"<b>욕심은 나중에.</b> 캐릭터, 스토리, 레벨 10개는 지금 넣지 마세요. 한 시간 안에 '돌아가는 것'이 먼저예요."},
+   {t:"제일 작은 버전 만들기",m:[5,15],goal:"조작 하나, 화면 하나",
+    why:"처음부터 다 시키면 어디가 고장 났는지 못 찾아요. 움직이기만 하는 상태를 먼저 받습니다.",
+    prompt:"HTML 파일 하나로 브라우저에서 바로 실행되는 간단한 게임을 만들어 줘.\n게임: {a}\n조작: {b}\n끝나는 조건: {c}\n\n지금은 점수, 효과음, 꾸미기 없이 기본 동작만 되게 해 줘.\nPC와 폰 둘 다에서 조작할 수 있게 해 줘.\n캔버스로 열어서 미리보기로 바로 해 볼 수 있게 해 줘.",
+    todo:["요청문 복사해서 ChatGPT에게 보내기","캔버스 오른쪽 위 미리보기로 실행하기","직접 한 판 해 보기"],
+    tip:"<b>코드만 길게 나오고 캔버스가 안 열리면</b> \"이 코드 캔버스로 열어 줘\"라고 한 번 더 말하세요."},
+   {t:"실행해 보고 고장 고치기",m:[15,25],goal:"이상한 점을 그대로 말하기",
+    why:"버그는 당연히 나와요. 고치는 요령은 '본 것'을 그대로 전달하는 겁니다. 추측해서 말하지 않기.",
+    prompt:"해 보니까 이렇게 돼: [본 것 그대로 적기]\n내가 원하는 건: [원래 되어야 하는 모습]\n다른 부분은 건드리지 말고 이것만 고쳐 줘.",
+    todo:["이상한 점 하나 찾기","[ ] 부분 채워서 보내기","고쳐졌는지 다시 해 보기"],
+    tip:"<b>빨간 오류 글자가 보이면</b> 그 글자를 통째로 복사해서 붙여 넣는 게 제일 빨라요."},
+   {t:"재미 하나씩 더하기",m:[25,40],goal:"한 번에 기능 하나",
+    why:"점수 → 시간 제한 → 점점 빨라지기 순으로, 하나 넣고 해 보고, 또 하나 넣습니다.",
+    prompt:"지금 게임에 이것 하나만 추가해 줘: [점수 표시 / 제한 시간 / 점점 어려워지기 / 최고 기록 저장]\n추가한 다음에도 기존 조작은 그대로 되게 해 줘.",
+    todo:["점수 넣기","다시 시작 버튼 넣기","하나 더 골라서 넣기"],
+    tip:"<b>한 번에 세 개 시키면</b> 셋 다 어설프게 나와요. 꼭 하나씩."},
+   {t:"디자이너답게 꾸미기",m:[40,50],goal:"색·글꼴·느낌을 구체적으로",
+    why:"\"예쁘게 해 줘\"는 아무 말도 안 한 거예요. 디자인과답게 색, 분위기, 참고할 스타일을 정확히 말하세요.",
+    prompt:"게임 기능은 그대로 두고 디자인만 바꿔 줘.\n분위기: [예: 레트로 픽셀 / 파스텔 / 네온 / 흑백 미니멀]\n색: [배경색, 강조색 2~3개]\n글꼴 느낌: [예: 두껍고 둥근 / 얇고 깔끔한]\n점수나 게임오버 화면도 같은 느낌으로 맞춰 줘.",
+    todo:["분위기·색 정해서 보내기","게임오버 화면까지 확인","폰 화면에서 글자 잘림 없는지 보기"],
+    tip:"<b>마음에 안 들면</b> 캔버스 위쪽의 이전 버전 버튼으로 돌아가거나, \"방금 전 디자인으로 되돌려 줘\"라고 말하세요."},
+   {t:"테스트하고 공유하기",m:[50,60],goal:"남이 해 봐도 되는지",
+    why:"내가 만든 건 나만 쉬워요. 옆 사람에게 설명 없이 시켜 보고 막히는 곳을 마지막으로 고칩니다.",
+    prompt:"처음 하는 사람도 알 수 있게 시작 화면에 게임 방법을 한두 줄로 넣어 줘.\n그리고 완성된 코드를 HTML 파일 하나로 정리해 줘.",
+    todo:["옆 사람한테 설명 없이 한 판 시키기","막힌 곳 하나 고치기","완성본 저장하기 (캔버스 공유 링크 또는 코드 복사해 .html 파일로)","한 줄 소개 쓰기: 무슨 게임이고 어디가 재밌는지"],
+    tip:"<b>오늘 다 못 끝냈어도 괜찮아요.</b> 다음 시간에 ChatGPT 왼쪽 목록에서 같은 대화를 열고 이어서 \"지난번 게임 이어서 하자\"로 시작하면 됩니다."}
+  ]},
+ web:{
+  name:"웹페이지",
+  fields:[["a","무슨 페이지?","예: 내가 좋아하는 카페 도감"],["b","누가 볼 거야?","예: 우리 반 친구들"],["c","분위기는?","예: 따뜻한 손글씨 느낌"]],
+  examples:[
+   ["자기소개",["나를 소개하는 한 장짜리 페이지","새 학기에 만나는 사람들","깔끔하고 밝은 느낌"]],
+   ["최애 도감",["내가 좋아하는 캐릭터·물건을 카드로 모은 도감","같은 걸 좋아하는 친구들","잡지 같은 느낌"]],
+   ["포트폴리오",["내 디자인 작업 6개를 보여 주는 포트폴리오","입시·취업 담당자","미니멀, 작품이 돋보이게"]],
+   ["동아리 홍보",["우리 동아리를 소개하고 신청을 받는 페이지","신입생","활기차고 컬러풀하게"]]
+  ],
+  steps:[
+   {t:"아이디어를 한 문장으로",m:[0,5],goal:"무엇을, 누구에게, 어떤 느낌으로",
+    why:"보는 사람이 정해지면 들어갈 내용과 말투가 정해져요. 위의 세 칸을 채우면 다음 단계 요청문이 자동으로 완성됩니다.",
+    todo:["위의 세 칸 채우기","보는 사람이 이 페이지에서 꼭 알아야 할 것 하나 정하기"],
+    tip:"<b>한 장이면 충분해요.</b> 메뉴 여러 개, 로그인, 게시판은 오늘 범위 밖이에요."},
+   {t:"구조부터 받기",m:[5,15],goal:"코드 말고 목차 먼저",
+    why:"바로 만들라고 하면 ChatGPT 마음대로 채워요. 섹션 구성을 먼저 받고, 빼고 더한 다음 만들게 합니다.",
+    prompt:"웹페이지를 만들려고 해. 아직 코드는 쓰지 말고 구성만 제안해 줘.\n주제: {a}\n보는 사람: {b}\n분위기: {c}\n\n위에서부터 아래로 어떤 섹션이 들어가면 좋을지 4~6개로 정리해 줘.",
+    todo:["요청문 복사해서 ChatGPT에게 보내기","섹션 중 빼거나 바꿀 것 고르기","\"이 구성으로 확정\"이라고 답하기"],
+    tip:"<b>구성이 별로면</b> \"○○ 섹션은 빼고 △△를 넣어 줘\"처럼 구체적으로 말하세요."},
+   {t:"첫 화면 만들기",m:[15,25],goal:"일단 전체를 한 번 띄우기",
+    why:"확정한 구성으로 페이지 전체를 받아요. 내용은 아직 대충이어도 됩니다.",
+    prompt:"확정한 구성으로 HTML 파일 하나짜리 웹페이지를 만들어 줘.\n폰과 PC 둘 다에서 보기 좋게 해 줘.\n내용이 정해지지 않은 곳은 임시 글로 채우고 표시해 줘.\n캔버스로 열어서 미리보기로 볼 수 있게 해 줘.",
+    todo:["캔버스 미리보기로 열어 보기","창을 좁혀서 폰 크기에서도 보기","이상한 점 하나 적어 두기"],
+    tip:"<b>고칠 땐</b> \"해 보니 [본 것]인데 [원하는 것]으로 바꿔 줘. 다른 데는 건드리지 마\" 형식이 제일 잘 통해요."},
+   {t:"진짜 내용 넣고 기능 하나",m:[25,40],goal:"내 글·내 사진 + 움직이는 것 하나",
+    why:"임시 글을 내 내용으로 바꾸고, 페이지에 손맛을 주는 기능을 딱 하나 넣습니다.",
+    prompt:"[섹션 이름]의 임시 글을 아래 내용으로 바꿔 줘:\n[내 내용 붙여넣기]\n\n그리고 이 기능 하나만 추가해 줘: [카드 누르면 자세히 보기 / 분류 버튼으로 거르기 / 위로 가기 버튼 / 다크모드 전환]",
+    todo:["임시 글 전부 내 내용으로 바꾸기","기능 하나 넣기","눌러 보고 잘 되는지 확인"],
+    tip:"<b>사진은</b> ChatGPT 대화창에 올리고 \"이 사진 넣어 줘\"라고 하면 돼요. 안 되면 일단 \"사진 자리만 만들어 줘\"."},
+   {t:"디자이너답게 다듬기",m:[40,50],goal:"색·글꼴·여백을 구체적으로",
+    why:"\"예쁘게\"는 아무 말도 안 한 거예요. 수업에서 배운 말로 지시하세요. 대비, 여백, 위계, 정렬.",
+    prompt:"내용과 기능은 그대로 두고 디자인만 다듬어 줘.\n색: [배경색, 글자색, 강조색]\n글꼴 느낌: [예: 제목은 굵고 개성 있게, 본문은 읽기 편하게]\n여백·정렬: [예: 여백 넉넉하게, 왼쪽 정렬]\n폰에서도 글자가 잘리거나 가로로 밀리지 않게 해 줘.",
+    todo:["색·글꼴 지시 보내기","제목과 본문 크기 차이 확인","폰·PC 둘 다 확인"],
+    tip:"<b>마음에 안 들면</b> 캔버스 위쪽의 이전 버전 버튼으로 돌아가거나, \"방금 전 디자인으로 되돌려 줘\"라고 말하세요."},
+   {t:"확인하고 공유하기",m:[50,60],goal:"보는 사람 눈으로 다시 보기",
+    why:"1단계에서 정한 '꼭 알아야 할 것'이 3초 안에 보이는지 확인하고 마무리합니다.",
+    prompt:"완성된 페이지를 HTML 파일 하나로 정리해 줘.\n그리고 처음 보는 사람 입장에서 헷갈릴 만한 곳이 있으면 세 가지만 알려 줘.",
+    todo:["옆 사람한테 3초 보여 주고 뭐 하는 페이지인지 물어보기","헷갈린 곳 하나 고치기","완성본 저장하기 (캔버스 공유 링크 또는 코드 복사해 .html 파일로)","한 줄 소개 쓰기: 누구를 위한 페이지인지"],
+    tip:"<b>오늘 다 못 끝냈어도 괜찮아요.</b> 다음 시간에 ChatGPT 왼쪽 목록에서 같은 대화를 열고 이어서 \"지난번 페이지 이어서 하자\"로 시작하면 됩니다."}
+  ]}
+};
+var SOS=[
+ ["화면이 하얗게 아무것도 안 나와요","오류가 있다는 뜻이에요. 그대로 말하세요.","화면이 하얗게 아무것도 안 나와. 원인 찾아서 고쳐 줘."],
+ ["고쳐 달랬는데 그대로예요","ChatGPT가 다른 곳을 고쳤을 수 있어요. 위치를 짚어 주세요.","아직 그대로야. [어디]에서 [무슨 일]이 생겨. 그 부분 코드를 다시 확인해 줘."],
+ ["너무 많이 바뀌어 버렸어요","한 단계 되돌리고 범위를 좁혀서 다시 시키세요.","방금 바꾼 거 취소하고 이전 버전으로 돌려 줘. 그다음 [이것]만 바꿔 줘."],
+ ["뭘 더 해야 할지 모르겠어요","ChatGPT에게 다음 할 일을 물어보세요. 고르는 건 내가 합니다.","지금 상태에서 30분 안에 넣을 수 있는 개선점 3개만 추천해 줘. 쉬운 순서로."]
+];
+var KEY="vibeGuide1",S={t:"game",f:{game:{},web:{}},c:{game:{},web:{}},open:{game:0,web:0}};
+try{var sv=JSON.parse(localStorage.getItem(KEY)||"null");if(sv&&sv.f)S=Object.assign(S,sv)}catch(e){}
+var h=(location.hash||"").slice(1);if(h==="game"||h==="web")S.t=h;
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function $(id){return document.getElementById(id)}
+function fill(p,mark){var f=S.f[S.t],d=DATA[S.t];return p.replace(/\{(\w)\}/g,function(_,k){var v=(f[k]||"").trim();var fd=d.fields.filter(function(x){return x[0]===k})[0];
+  if(!mark)return v||("["+fd[1].replace("?","")+"]");return '<mark>'+esc(v||("["+fd[1].replace("?","")+"]"))+'</mark>'})}
+function renderFields(){var d=DATA[S.t],f=S.f[S.t];
+ $("fields").innerHTML=d.fields.map(function(x){return '<label for="f-'+S.t+'-'+x[0]+'">'+x[1]+'<input id="f-'+S.t+'-'+x[0]+'" data-k="'+x[0]+'" placeholder="'+esc(x[2])+'" value="'+esc(f[x[0]]||"")+'"></label>'}).join("");
+ $("examples").innerHTML='<span>예시로 채우기</span>'+d.examples.map(function(e,i){return '<button class="chip" data-ex="'+i+'">'+e[0]+'</button>'}).join("");
+}
+function stepDone(i){var st=DATA[S.t].steps[i],c=S.c[S.t];var n=st.todo.filter(function(_,j){return c[i+"-"+j]}).length;return [n,st.todo.length]}
+function renderSteps(){var d=DATA[S.t];
+ $("steps").innerHTML=d.steps.map(function(st,i){var dn=stepDone(i),ok=dn[0]===dn[1];
+  return '<article class="step'+(S.open[S.t]===i?" open cur":"")+(ok?" ok":"")+'" id="s'+i+'">'+
+  '<div class="shead" data-open="'+i+'" role="button" tabindex="0" aria-expanded="'+(S.open[S.t]===i)+'"><div class="num">'+(i+1)+'</div><div><h3>'+st.t+'</h3><div class="goal">'+st.goal+'</div></div>'+
+  '<div class="time">'+st.m[0]+'–'+st.m[1]+'분<span class="st">'+(ok?"완료":dn[0]?dn[0]+"/"+dn[1]:"")+'</span></div></div>'+
+  '<div class="sbody"><p class="why">'+st.why+'</p>'+
+  (st.prompt?'<div class="prompt"><div class="ptop"><span class="eyebrow">ChatGPT에게 보낼 말</span><button class="copy" data-copy="'+i+'">복사</button></div><pre>'+fill(esc(st.prompt),true)+'</pre></div>':'')+
+  '<ul class="todo">'+st.todo.map(function(t,j){return '<li><label><input type="checkbox" id="c-'+S.t+'-'+i+'-'+j+'" data-c="'+i+'-'+j+'"'+(S.c[S.t][i+"-"+j]?" checked":"")+'><span>'+esc(t)+'</span></label></li>'}).join("")+'</ul>'+
+  '<div class="tip">'+st.tip+'</div></div></article>'}).join("");
+ renderBar();
+}
+function renderBar(){var d=DATA[S.t],all=0,done=0;
+ $("bar").innerHTML=d.steps.map(function(st,i){var dn=stepDone(i);all+=dn[1];done+=dn[0];var w=st.m[1]-st.m[0];var cls=dn[0]===dn[1]?"done":dn[0]?"part":"";
+  return '<button class="seg '+cls+'" style="flex:'+w+';--p:'+(dn[0]/dn[1])+'" data-go="'+i+'" aria-label="'+(i+1)+'단계 '+st.t+'"><i></i><span>'+(i+1)+' '+st.t.split(" ")[0]+'</span></button>'}).join("");
+ $("pct").textContent=done;$("tot").textContent=all;
+}
+function renderAll(){document.body.className=S.t;$("ttl").textContent=DATA[S.t].name;
+ ["game","web"].forEach(function(t){$("tk-"+t).setAttribute("aria-pressed",S.t===t)});
+ renderFields();renderSteps();
+ $("sos").innerHTML=SOS.map(function(s,i){return '<details><summary>'+s[0]+'</summary><p>'+s[1]+'</p><div class="prompt"><div class="ptop"><span class="eyebrow">ChatGPT에게 보낼 말</span><button class="copy" data-sos="'+i+'">복사</button></div><pre>'+esc(s[2])+'</pre></div></details>'}).join("");
+}
+function openStep(i,scroll){S.open[S.t]=i;save();renderSteps();if(scroll){var el=$("s"+i);if(el)el.scrollIntoView({behavior:"smooth",block:"start"})}}
+function copyText(btn,txt){function ok(){btn.textContent="복사됨";btn.classList.add("did");setTimeout(function(){btn.textContent="복사";btn.classList.remove("did")},1500)}
+ function fb(){var pre=btn.closest(".prompt").querySelector("pre");var r=document.createRange();r.selectNodeContents(pre);var sel=getSelection();sel.removeAllRanges();sel.addRange(r);btn.textContent="선택됨 · 길게 눌러 복사"}
+ try{navigator.clipboard.writeText(txt).then(ok,fb)}catch(e){fb()}}
+document.addEventListener("click",function(e){var t=e.target.closest("[data-t],[data-ex],[data-open],[data-go],[data-copy],[data-sos],#reset");if(!t)return;
+ if(t.dataset.t){S.t=t.dataset.t;save();renderAll()}
+ else if(t.dataset.ex!=null){var ex=DATA[S.t].examples[+t.dataset.ex][1];DATA[S.t].fields.forEach(function(x,i){S.f[S.t][x[0]]=ex[i]});save();renderFields();renderSteps()}
+ else if(t.dataset.open!=null){var i=+t.dataset.open;openStep(S.open[S.t]===i?-1:i,false)}
+ else if(t.dataset.go!=null){openStep(+t.dataset.go,true)}
+ else if(t.dataset.copy!=null){copyText(t,fill(DATA[S.t].steps[+t.dataset.copy].prompt,false))}
+ else if(t.dataset.sos!=null){copyText(t,SOS[+t.dataset.sos][2])}
+ else if(t.id==="reset"){if(!t.classList.contains("arm")){t.classList.add("arm");t.textContent="한 번 더 누르면 체크가 지워져요";setTimeout(function(){t.classList.remove("arm");t.textContent="처음부터 다시"},3000)}
+  else{S.c[S.t]={};S.open[S.t]=0;save();t.classList.remove("arm");t.textContent="처음부터 다시";renderSteps()}}
+});
+document.addEventListener("keydown",function(e){var t=e.target.closest("[data-open]");if(t&&(e.key==="Enter"||e.key===" ")){e.preventDefault();t.click()}});
+document.addEventListener("input",function(e){var k=e.target.dataset.k;if(!k)return;S.f[S.t][k]=e.target.value;save();
+ document.querySelectorAll(".step").forEach(function(el,i){var st=DATA[S.t].steps[i];var pre=el.querySelector("pre");if(st.prompt&&pre)pre.innerHTML=fill(esc(st.prompt),true)})});
+document.addEventListener("change",function(e){var c=e.target.dataset.c;if(!c)return;S.c[S.t][c]=e.target.checked;
+ var i=+c.split("-")[0],dn=stepDone(i);save();
+ if(dn[0]===dn[1]&&i<DATA[S.t].steps.length-1){openStep(i+1,true)}else{var el=$("s"+i);el.classList.toggle("ok",dn[0]===dn[1]);el.querySelector(".st").textContent=dn[0]===dn[1]?"완료":dn[0]?dn[0]+"/"+dn[1]:"";renderBar()}});
+renderAll();
+</script>
+
+</body>
+</html>
