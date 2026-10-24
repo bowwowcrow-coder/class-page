@@ -27,7 +27,7 @@ const CFG_HELP = {
 const LEGACY = { school: '인천디자인고등학교', tab: '쉅', refsLabel: '레퍼런스' };
 const SCHEMA_VERSION = '20';            // 시트 구조가 바뀌는 업데이트마다 올린다 → 첫 접속 때 setup이 자동으로 돈다
 const TZ = 'Asia/Seoul';
-const SHEET = { TRIPS: '체험학습', CHECKS: '체크', COURSES: '수업', STUDENTS: '학생', NOTICES: '공지', REFS: '레퍼런스', TASKS: '과제', SUBS: '제출', GRADES: '채점', ALLOW: '허용', LOG: '로그', CONFIG: '설정', START: '시작하기', SURVEYS: '설문', ANSWERS: '응답', MEMES: '메인짤', ATTEND: '출결' };
+const SHEET = { TRIPS: '체험학습', CHECKS: '체크', COURSES: '수업', STUDENTS: '학생', NOTICES: '공지', REFS: '레퍼런스', TASKS: '과제', SUBS: '제출', GRADES: '채점', ALLOW: '허용', LOG: '로그', CONFIG: '설정', START: '시작하기', SURVEYS: '설문', ANSWERS: '응답', MEMES: '메인짤', ATTEND: '출결', VIBE: '바이브코딩' };
 
 const PIN_LENGTH = 4;          // PIN 자릿수
 const MAX_FAILS = 5;           // 연속 오류 허용 횟수
@@ -2971,7 +2971,7 @@ function sheet_(name) {
   if (sh) return sh;
   const auto = {};
   auto[SHEET.SUBS] = SUB_HEADERS; auto[SHEET.GRADES] = GRADE_HEADERS; auto[SHEET.ALLOW] = ALLOW_HEADERS; auto[SHEET.LOG] = LOG_HEADERS;
-  auto[SHEET.SURVEYS] = SURVEY_HEADERS; auto[SHEET.ANSWERS] = ANSWER_HEADERS; auto[SHEET.MEMES] = MEME_HEADERS; auto[SHEET.ATTEND] = ATTEND_HEADERS; auto[SHEET.CHECKS] = CHECK_HEADERS; auto[SHEET.TRIPS] = TRIP_HEADERS;
+  auto[SHEET.SURVEYS] = SURVEY_HEADERS; auto[SHEET.ANSWERS] = ANSWER_HEADERS; auto[SHEET.MEMES] = MEME_HEADERS; auto[SHEET.ATTEND] = ATTEND_HEADERS; auto[SHEET.CHECKS] = CHECK_HEADERS; auto[SHEET.TRIPS] = TRIP_HEADERS; auto[SHEET.VIBE] = VIBE_HEADERS;
   if (!auto[name]) throw new Error('[' + name + '] 시트가 없습니다. 편집기에서 setup을 먼저 실행해 주세요.');
   try { sh = ss.insertSheet(name); } catch (e) { sh = ss.getSheetByName(name); } // 동시에 두 요청이 만들려 한 경우
   if (!sh) throw new Error('[' + name + '] 시트를 만들지 못했습니다. 편집기에서 setup을 실행해 주세요.');
@@ -3591,4 +3591,47 @@ function onceFixName6_() {
   const s = findStudent_('10805');
   if (s && String(s.v[C.NAME]).trim() === '강시호') { s.sh.getRange(s.row, C.NAME + 1).setValue('김시호'); diagRow_('이름 고침', '10805 강시호 → 김시호'); }
   else diagRow_('이름 고침', '10805가 이미 다른 이름이라 그대로 둠');
+}
+
+
+/* ───────────── 바이브코딩 실습 가이드(/vibe) 진행 저장 ─────────────
+ * 학생이 어느 노트북에서 열어도 이어서 하도록, 진행 상황(트랙·아이디어·체크)을 학생별 한 줄로 둔다.
+ * 진행 칸은 사람이 보기 쉽게 요약(예: 게임 3/6단계)만 따로 적는다. */
+const VIBE_HEADERS = ['학번', '이름', '트랙', '진행', '저장 데이터', '수정일시'];
+const VIBE_MAX = 20000;
+function vibeRow_(sh, id) {
+  const n = sh.getLastRow();
+  if (n < 2) return 0;
+  const ids = sh.getRange(2, 1, n - 1, 1).getValues();
+  for (let i = 0; i < ids.length; i++) if (normId_(ids[i][0]) === id) return i + 2;
+  return 0;
+}
+function apiVibeLoad(token) {
+  const s = sessionStudent_(token);
+  if (!s) return expired_();
+  const id = normId_(s.v[C.ID]);
+  const sh = sheet_(SHEET.VIBE);
+  const row = vibeRow_(sh, id);
+  let data = null;
+  if (row) { try { data = JSON.parse(String(sh.getRange(row, 5).getValue() || 'null')); } catch (e) { data = null; } }
+  return { ok: true, id: id, name: String(s.v[C.NAME]).trim(), data: data };
+}
+function apiVibeSave(token, data, summary) {
+  const s = sessionStudent_(token);
+  if (!s) return expired_();
+  const json = JSON.stringify(data || {});
+  if (json.length > VIBE_MAX) return fail_('저장할 내용이 너무 길어요. 아이디어 칸을 조금 줄여 주세요.');
+  const id = normId_(s.v[C.ID]);
+  const sum = summary || {};
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) return fail_('저장이 몰리고 있어요. 잠시 후 자동으로 다시 저장합니다.');
+  try {
+    const sh = sheet_(SHEET.VIBE);
+    const row = vibeRow_(sh, id) || sh.getLastRow() + 1;
+    const now = new Date();
+    sh.getRange(row, 1, 1, VIBE_HEADERS.length).setValues([[id, String(s.v[C.NAME]).trim(), String(sum.track || '').slice(0, 10), String(sum.progress || '').slice(0, 60), json, now]]);
+    return { ok: true, time: Utilities.formatDate(now, TZ, 'HH:mm') };
+  } finally {
+    lock.releaseLock();
+  }
 }

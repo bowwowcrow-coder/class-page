@@ -119,6 +119,26 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   .seg span{display:none}
   .tk b{font-size:19px}
 }
+
+.gate{display:flex;flex-direction:column;gap:14px}
+.gate h2{font:400 24px/1.2 var(--fDisp)}
+.gate p{margin:0;color:var(--sub);font-size:14px;max-width:60ch}
+.grow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.gate label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--sub);min-width:0}
+.gate input{font:500 16px/1.4 var(--fBody);color:var(--ink);background:var(--code);border:1px solid var(--line);border-radius:6px;padding:10px;min-width:0;font-variant-numeric:tabular-nums}
+.gate input:focus{outline:2px solid var(--acc);border-color:transparent}
+.gbtns{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{all:unset;cursor:pointer;font:700 15px/1 var(--fBody);padding:12px 18px;border-radius:8px;background:var(--acc);color:#fff}
+.btn[disabled]{opacity:.5;cursor:default}
+.btn:focus-visible,.ghost:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.ghost{all:unset;cursor:pointer;font-size:13px;color:var(--sub);text-decoration:underline}
+.gmsg{font-size:13.5px;color:var(--game);min-height:1em}
+.who{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--sub);background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:6px 8px 6px 14px}
+.who b{color:var(--ink);font-weight:700}
+.who .sv{font:600 12px/1 var(--fMono)}
+.who .sv.bad{color:var(--game)}
+.who .ghost{padding:0 6px}
+@media (max-width:640px){.grow{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 </style>
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
@@ -133,7 +153,32 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
       <h1>AI랑 <span id="ttl">게임</span> 만들기</h1>
       <p>ChatGPT에게 말로 시키고, 실행해 보고, 고쳐 달라고 하는 걸 한 시간 동안 여섯 번 반복합니다.</p>
     </div>
+    <div class="who" id="who" hidden></div>
   </header>
+
+  <section class="panel gate" id="gate" aria-labelledby="gateH">
+    <h2 id="gateH">수업 페이지 계정으로 로그인</h2>
+    <p>로그인하면 진행 상황이 저장돼서 다른 노트북에서 열어도 이어서 할 수 있어요. 수업 페이지와 같은 학번·이름·PIN이에요.</p>
+    <div class="grow" id="gStep1">
+      <label for="gId">학번<input id="gId" inputmode="numeric" maxlength="5" autocomplete="off" placeholder="예: 30403"></label>
+      <label for="gName">이름<input id="gName" autocomplete="off" placeholder="예: 홍길동"></label>
+    </div>
+    <div class="grow" id="gStepPin" hidden>
+      <label for="gPin">PIN (숫자 4자리)<input id="gPin" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></label>
+    </div>
+    <div class="grow" id="gStepSetup" hidden>
+      <label for="gCode">휴대폰 번호 뒤 4자리<input id="gCode" inputmode="numeric" maxlength="4" autocomplete="off"></label>
+      <label for="gNew">새로 정할 PIN (숫자 4자리)<input id="gNew" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></label>
+    </div>
+    <div class="gmsg" id="gMsg" role="status"></div>
+    <div class="gbtns">
+      <button class="btn" id="gGo">다음</button>
+      <button class="ghost" id="gBack" hidden>학번 다시 입력</button>
+      <button class="ghost" id="gGuest">로그인 없이 하기 (이 노트북에만 저장)</button>
+    </div>
+  </section>
+
+  <div id="main" hidden style="display:contents">
 
   <div class="tracks" role="group" aria-label="만들 것 고르기">
     <button class="tk" id="tk-game" data-t="game" aria-pressed="true"><b>게임</b><small>탭·클릭으로 하는 한 화면 게임</small></button>
@@ -159,8 +204,9 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
     <div class="sosl" id="sos"></div>
   </section>
 
+  </div>
   <div class="foot">
-    <span>체크한 내용은 이 기기에만 저장돼요.</span>
+    <span id="footNote">체크한 내용은 이 기기에만 저장돼요.</span>
     <button class="reset" id="reset">처음부터 다시</button>
   </div>
 </div>
@@ -257,7 +303,7 @@ var SOS=[
 var KEY="vibeGuide1",S={t:"game",f:{game:{},web:{}},c:{game:{},web:{}},open:{game:0,web:0}};
 try{var sv=JSON.parse(localStorage.getItem(KEY)||"null");if(sv&&sv.f)S=Object.assign(S,sv)}catch(e){}
 var h=(location.hash||"").slice(1);if(h==="game"||h==="web")S.t=h;
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}if(window.vibeSync)vibeSync()}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 function $(id){return document.getElementById(id)}
 function fill(p,mark){var f=S.f[S.t],d=DATA[S.t];return p.replace(/\{(\w)\}/g,function(_,k){var v=(f[k]||"").trim();var fd=d.fields.filter(function(x){return x[0]===k})[0];
@@ -309,6 +355,68 @@ document.addEventListener("change",function(e){var c=e.target.dataset.c;if(!c)re
  var i=+c.split("-")[0],dn=stepDone(i);save();
  if(dn[0]===dn[1]&&i<DATA[S.t].steps.length-1){openStep(i+1,true)}else{var el=$("s"+i);el.classList.toggle("ok",dn[0]===dn[1]);el.querySelector(".st").textContent=dn[0]===dn[1]?"완료":dn[0]?dn[0]+"/"+dn[1]:"";renderBar()}});
 renderAll();
+
+/* ── 수업 페이지 로그인 연동: 진행 상황을 학생별로 구글 시트에 저장 ── */
+(function(){
+ var API='https://script.google.com/macros/s/AKfycbyw6oiaICnnbyw2l0xVsVCJ0VBI1lz4mQM3N9BpNOs7p0edgAV9dcWNKQxMNTMhIdVykw/exec';
+ var TK='vibe_token',GK='vibe_guest',tok=null,me=null,mode='',timer=null,saving=false,again=false;
+ function g(k){try{return localStorage.getItem(k)}catch(e){return null}}
+ function p(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}}
+ function call(fn){var args=[].slice.call(arguments,1);
+  return fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({fn:fn,args:args})})
+   .then(function(r){return r.json()}).then(function(r){if(r.err!==undefined)throw new Error(r.err);return r.v})}
+ function msg(t){$("gMsg").textContent=t||""}
+ function busy(on){$("gGo").disabled=on;$("gGo").textContent=on?"확인 중…":(mode?"로그인":"다음")}
+ function show(main){$("gate").hidden=main;$("main").hidden=!main}
+ function chip(state){var w=$("who");
+  if(!me){w.hidden=false;w.innerHTML='<span>로그인 안 함 · 이 노트북에만 저장</span><button class="ghost" id="wLogin">로그인</button>';$("footNote").textContent="로그인하지 않아서 이 노트북에만 저장돼요.";return}
+  w.hidden=false;w.innerHTML='<b>'+esc(me.id)+' '+esc(me.name)+'</b><span class="sv'+(state==="bad"?" bad":"")+'" id="wState">'+esc(state||"")+'</span><button class="ghost" id="wOut">로그아웃</button>';
+  $("footNote").textContent="진행 상황은 내 계정에 저장돼서 다른 노트북에서도 이어져요."}
+ function summary(){var parts=[],tr={game:"게임",web:"웹"};
+  ["game","web"].forEach(function(t){var st=DATA[t].steps,done=0,any=0;st.forEach(function(x,i){var n=x.todo.filter(function(_,j){return S.c[t][i+"-"+j]}).length;if(n)any=1;if(n===x.todo.length)done++});if(any||t===S.t)parts.push(tr[t]+" "+done+"/"+st.length+"단계")});
+  return {track:tr[S.t],progress:parts.join(" · ")}}
+ function push(){if(!tok)return;if(saving){again=true;return}saving=true;chip("저장 중…");
+  call("apiVibeSave",tok,S,summary()).then(function(r){saving=false;
+    if(r&&r.ok){chip("저장됨 "+r.time)}else if(r&&r.expired){expire()}else{chip("저장 실패 · 다시 시도 중");setTimeout(push,4000)}
+    if(again){again=false;push()}})
+  .catch(function(){saving=false;chip("bad");$("wState").textContent="연결 끊김 · 다시 시도 중";setTimeout(push,5000)})}
+ window.vibeSync=function(){if(!tok)return;clearTimeout(timer);chip("저장 대기…");timer=setTimeout(push,1200)};
+ function apply(data){if(data&&data.f&&data.c){S=Object.assign({t:"game",f:{game:{},web:{}},c:{game:{},web:{}},open:{game:0,web:0}},data);try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}renderAll()}}
+ function enter(token,who,data,fresh){tok=token;me=who;p(TK,token);p(GK,null);
+  if(data)apply(data);else{S={t:S.t,f:{game:{},web:{}},c:{game:{},web:{}},open:{game:0,web:0}};renderAll();push()}
+  show(true);chip(data?"불러옴":"새로 시작")}
+ function expire(){tok=null;p(TK,null);var keep=me;me=null;mode="";reset1();if(keep){$("gId").value=keep.id;$("gName").value=keep.name}
+  show(false);$("who").hidden=true;msg("로그인 시간이 지났어요. 다시 로그인하면 이어서 저장돼요.")}
+ function reset1(){mode="";$("gStepPin").hidden=true;$("gStepSetup").hidden=true;$("gBack").hidden=true;$("gId").disabled=false;$("gName").disabled=false;busy(false)}
+ function step1(){var id=$("gId").value.replace(/\D/g,""),name=$("gName").value.replace(/\s+/g,"");
+  if(id.length!==5||!name){msg("학번 5자리와 이름을 입력해 주세요.");return}
+  busy(true);msg("");call("apiCheckStudent",id,name).then(function(r){busy(false);
+   if(!r.ok){msg(r.error);return}
+   mode=r.mode;me={id:id,name:r.name||name};$("gId").disabled=true;$("gName").disabled=true;$("gBack").hidden=false;
+   if(mode==="login"){$("gStepPin").hidden=false;$("gPin").value="";$("gPin").focus()}else{$("gStepSetup").hidden=false;$("gCode").focus();msg("처음이라 PIN을 만들어야 해요. 수업 페이지에서도 이 PIN을 써요.")}
+   busy(false)}).catch(function(e){busy(false);msg("연결이 안 돼요. 인터넷을 확인하고 다시 눌러 주세요.")})}
+ function step2(){var who=me,pr;
+  if(mode==="login"){var pin=$("gPin").value.trim();if(!/^\d{4}$/.test(pin)){msg("PIN 숫자 4자리를 입력해 주세요.");return}pr=call("apiLogin",who.id,who.name,pin)}
+  else{var code=$("gCode").value.replace(/\D/g,""),np=$("gNew").value.trim();if(code.length!==4||!/^\d{4}$/.test(np)){msg("휴대폰 번호 뒤 4자리와 새 PIN 4자리를 입력해 주세요.");return}pr=call("apiSetupPin",who.id,who.name,code,np)}
+  busy(true);msg("");
+  pr.then(function(r){if(!r.ok){busy(false);msg(r.error);return}var t=r.token;
+    return call("apiVibeLoad",t).then(function(v){busy(false);if(!v.ok){msg(v.error);return}enter(t,{id:v.id,name:v.name},v.data)})})
+  .catch(function(){busy(false);msg("연결이 안 돼요. 인터넷을 확인하고 다시 눌러 주세요.")})}
+ $("gGo").addEventListener("click",function(){mode?step2():step1()});
+ ["gId","gName","gPin","gCode","gNew"].forEach(function(id){$(id).addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();$("gGo").click()}})});
+ $("gBack").addEventListener("click",function(){me=null;reset1();msg("");$("gId").focus()});
+ $("gGuest").addEventListener("click",function(){p(GK,"1");tok=null;me=null;show(true);chip()});
+ document.addEventListener("click",function(e){
+  if(e.target.id==="wOut"){if(tok)call("apiLogout",tok).catch(function(){});tok=null;me=null;p(TK,null);
+   S={t:"game",f:{game:{},web:{}},c:{game:{},web:{}},open:{game:0,web:0}};try{localStorage.removeItem(KEY)}catch(x){}renderAll();reset1();$("gId").value="";$("gName").value="";msg("로그아웃했어요.");show(false);$("who").hidden=true}
+  if(e.target.id==="wLogin"){p(GK,null);reset1();msg("");show(false);$("who").hidden=true}});
+ /* 시작: 저장된 로그인 → 불러오기, 아니면 로그인 화면 */
+ try{var w=JSON.parse(g("cls_who")||"null");if(w&&w.id){$("gId").value=w.id;$("gName").value=w.name||""}}catch(e){}
+ var t0=g(TK);
+ if(t0){show(false);msg("불러오는 중…");call("apiVibeLoad",t0).then(function(v){msg("");if(v&&v.ok)enter(t0,{id:v.id,name:v.name},v.data);else{p(TK,null)}}).catch(function(){msg("연결이 안 돼요. 새로고침해 주세요.")})}
+ else if(g(GK)){show(true);chip()}
+ else show(false);
+})();
 </script>
 
 </body>
