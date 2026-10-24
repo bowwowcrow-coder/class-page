@@ -1,6 +1,6 @@
 {
-  "version": "20261023.0919",
-  "note": "10805 이름 김시호로 되돌림",
+  "version": "20261024.2048",
+  "note": "공지 본문 주소를 누를 수 있는 링크로",
   "files": [
     {
       "name": "Code.gs",
@@ -12,7 +12,7 @@
     },
     {
       "name": "Index.html",
-      "sha256": "d6c836faba37a4bd39c1ff672055856b09ee959c142e3f50aec1ae5be43de4a9"
+      "sha256": "d467e2001500abfdc32848c071ae649536431751469965f4db5fcfbfc417e63a"
     },
     {
       "name": "Setup.html",

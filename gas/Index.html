@@ -255,6 +255,7 @@
   .notice h3 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.015em; }
   .notice time, .row-side { flex: none; font-size: 13px; color: var(--sub); font-variant-numeric: tabular-nums; }
   .notice p, .row-body { margin: 6px 0 0; font-size: 15px; color: var(--sub); white-space: pre-wrap; }
+  .body-link { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; word-break: break-all; }
   .pin-tag { display: inline-block; margin-right: 6px; color: var(--accent-ink, var(--accent)); font-size: 13px; font-weight: 600; }
 
   /* 목록 행 */
@@ -841,6 +842,21 @@
     if (text != null) node.textContent = text;
     return node;
   }
+  /* 공지 본문의 주소(https://…, ○○.pages.dev/…)를 누를 수 있는 링크로 */
+  function linkEl(tag, cls, text) {
+    var node = el(tag, cls);
+    var s = String(text == null ? '' : text), re = /(https?:\/\/[^\s<>"']+|\b[a-z0-9-]+\.pages\.dev(?:\/[^\s<>"']*)?)/gi, last = 0, m;
+    while ((m = re.exec(s))) {
+      var u = m[0].replace(/[.,)\]]+$/, '');
+      if (m.index > last) node.appendChild(document.createTextNode(s.slice(last, m.index)));
+      var a = el('a', 'body-link', u);
+      a.href = /^https?:/i.test(u) ? u : 'https://' + u; a.target = '_blank'; a.rel = 'noopener';
+      a.addEventListener('click', function (e) { e.stopPropagation(); });
+      node.appendChild(a); last = m.index + u.length; re.lastIndex = last;
+    }
+    if (last < s.length) node.appendChild(document.createTextNode(s.slice(last)));
+    return node;
+  }
   function button(cls, text, onClick) {
     var b = el('button', cls, text);
     b.type = 'button';
@@ -1227,7 +1243,7 @@
     var nlist = el('div', 'list');
     latest.forEach(function (n) {
       var body = el('div', 'open-body');
-      body.appendChild(el('p', 'row-body', n.body || ((n.files || []).length ? '' : '내용이 없습니다.')));
+      body.appendChild(linkEl('p', 'row-body', n.body || ((n.files || []).length ? '' : '내용이 없습니다.')));
       if ((n.files || []).length) body.appendChild(noticeAttach(n.files));
       body.hidden = true;
       var row = button('row', null, function () {
@@ -1293,7 +1309,7 @@
       head.appendChild(title);
       if (n.date) head.appendChild(el('time', '', n.date));
       item.appendChild(head);
-      if (n.body) item.appendChild(el('p', '', n.body));
+      if (n.body) item.appendChild(linkEl('p', '', n.body));
       if ((n.files || []).length) item.appendChild(noticeAttach(n.files));
       list.appendChild(item);
     });
