@@ -3597,7 +3597,7 @@ function onceFixName6_() {
 /* ───────────── 바이브코딩 실습 가이드(/vibe) 진행 저장 ─────────────
  * 학생이 어느 노트북에서 열어도 이어서 하도록, 진행 상황(트랙·아이디어·체크)을 학생별 한 줄로 둔다.
  * 진행 칸은 사람이 보기 쉽게 요약(예: 게임 3/6단계)만 따로 적는다. */
-const VIBE_HEADERS = ['학번', '이름', '트랙', '진행', '저장 데이터', '수정일시'];
+const VIBE_HEADERS = ['학번', '이름', '트랙', '진행', '저장 데이터', '수정일시', '게임 링크', '웹 링크'];
 const VIBE_MAX = 20000;
 function vibeRow_(sh, id) {
   const n = sh.getLastRow();
@@ -3629,7 +3629,9 @@ function apiVibeSave(token, data, summary) {
     const sh = sheet_(SHEET.VIBE);
     const row = vibeRow_(sh, id) || sh.getLastRow() + 1;
     const now = new Date();
-    sh.getRange(row, 1, 1, VIBE_HEADERS.length).setValues([[id, String(s.v[C.NAME]).trim(), String(sum.track || '').slice(0, 10), String(sum.progress || '').slice(0, 60), json, now]]);
+    if (sh.getLastColumn() < VIBE_HEADERS.length) sh.getRange(1, 1, 1, VIBE_HEADERS.length).setValues([VIBE_HEADERS]).setFontWeight('bold').setBackground('#f5f5f7');
+    const link = function (v) { v = String(v || '').trim(); return /^https?:\/\//i.test(v) ? v.slice(0, 300) : ''; };
+    sh.getRange(row, 1, 1, VIBE_HEADERS.length).setValues([[id, String(s.v[C.NAME]).trim(), String(sum.track || '').slice(0, 10), String(sum.progress || '').slice(0, 60), json, now, link(sum.glink), link(sum.wlink)]]);
     return { ok: true, time: Utilities.formatDate(now, TZ, 'HH:mm') };
   } finally {
     lock.releaseLock();

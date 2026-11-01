@@ -2,13 +2,12 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<link rel="icon" href="/favicon-64.png">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>바이브코딩 실습 가이드</title>
-<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="icon" href="/favicon-64.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
-/* 레이아웃: 상단 60분 타임 눈금자 + 세로 단계 카드. 트랙(게임/웹)에 따라 강조색만 바뀜 */
+/* 레이아웃: 한 화면에 한 단계. 위에는 60분 눈금자, 아래에는 이전/다음. 회차(게임/웹)에 따라 강조색만 바뀜 */
 :root{
   --bg:#EEF1F4; --panel:#FFFFFF; --ink:#18212B; --sub:#5B6774; --line:#D3DAE2;
   --game:#C8325F; --web:#2856D8; --acc:var(--game); --accSoft:#F8E3EA;
@@ -23,152 +22,163 @@
 :root[data-theme="dark"]{
   --bg:#12171D; --panel:#1A2129; --ink:#E6EBF0; --sub:#93A0AD; --line:#2C3640;
   --game:#F0668F; --web:#6F93FF; --accSoft:#3A1F29; --ok:#4CC28C; --code:#141A20; color-scheme:dark}
-body.web{--acc:var(--web)}
-body.web{--accSoft:#E1E8FB}
+body.web{--acc:var(--web);--accSoft:#E1E8FB}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) body.web{--accSoft:#1D2747}}
 :root[data-theme="dark"] body.web{--accSoft:#1D2747}
 
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
 body{background:var(--bg);color:var(--ink);font:400 15px/1.65 var(--fBody);
   background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
-  background-size:24px 24px;background-attachment:fixed}
-.wrap{max-width:860px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 64px;display:flex;flex-direction:column;gap:20px}
+  background-size:24px 24px;background-attachment:fixed;min-height:100vh}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 40px;display:flex;flex-direction:column;gap:18px}
 h1,h2,h3{text-wrap:balance;margin:0}
-.top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
-.top h1{font:400 clamp(30px,6vw,44px)/1.05 var(--fDisp);letter-spacing:-.5px}
-.top h1 span{color:var(--acc)}
-.top p{margin:6px 0 0;color:var(--sub)}
+p{margin:0}
 .eyebrow{font:600 11px/1 var(--fMono);letter-spacing:.12em;text-transform:uppercase;color:var(--sub)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px}
+button{font-family:inherit}
+.btn{all:unset;box-sizing:border-box;cursor:pointer;font:700 15px/1 var(--fBody);padding:14px 20px;border-radius:8px;background:var(--acc);color:#fff;text-align:center}
+.btn[disabled]{opacity:.45;cursor:default}
+.btn.line{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.ghost{all:unset;cursor:pointer;font-size:13px;color:var(--sub);text-decoration:underline}
+.btn:focus-visible,.ghost:focus-visible,.chip:focus-visible,.seg:focus-visible,.copy:focus-visible,.trk:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px}
-.tracks{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.tk{all:unset;cursor:pointer;border:2px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--panel);display:flex;flex-direction:column;gap:2px}
-.tk b{font:400 22px/1.2 var(--fDisp)}
-.tk small{color:var(--sub);font-size:13px}
-.tk:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
-.tk[aria-pressed="true"]{border-color:var(--acc);background:var(--accSoft)}
-.tk[aria-pressed="true"] b{color:var(--acc)}
+/* 화면 전환 */
+.screen{animation:in .28s ease both}
+.screen.back{animation-name:inBack}
+@keyframes in{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+@keyframes inBack{from{opacity:0;transform:translateX(-18px)}to{opacity:1;transform:none}}
 
-.idea{display:flex;flex-direction:column;gap:12px}
-.idea h2{font:700 17px/1.3 var(--fBody)}
-.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.fields label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--sub);min-width:0}
-.fields input{font:500 15px/1.4 var(--fBody);color:var(--ink);background:var(--code);border:1px solid var(--line);border-radius:6px;padding:9px 10px;min-width:0}
-.fields input:focus{outline:2px solid var(--acc);border-color:transparent}
-.ex{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.ex span{font-size:12px;color:var(--sub);margin-right:2px}
-.chip{all:unset;cursor:pointer;font-size:13px;padding:4px 10px;border:1px solid var(--line);border-radius:99px;background:var(--panel)}
-.chip:hover,.chip:focus-visible{border-color:var(--acc);color:var(--acc)}
+/* 로그인 */
+.gate{display:flex;flex-direction:column;gap:14px}
+.gate h2{font:400 24px/1.2 var(--fDisp)}
+.gate p{color:var(--sub);font-size:14px;max-width:60ch}
+.grow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--sub);min-width:0}
+label.f input{font:500 16px/1.4 var(--fBody);color:var(--ink);background:var(--code);border:1px solid var(--line);border-radius:6px;padding:11px 12px;min-width:0;width:100%}
+label.f input:focus{outline:2px solid var(--acc);border-color:transparent}
+.gbtns{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.gmsg{font-size:13.5px;color:var(--game);min-height:1em}
 
-/* 60분 눈금자 */
-.ruler{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px 10px}
-body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
-.rhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
-.rhead b{font:600 13px/1 var(--fMono)}
-.rhead b em{font-style:normal;color:var(--acc)}
-.bar{display:flex;gap:3px;height:26px}
-.seg{all:unset;cursor:pointer;position:relative;border-radius:4px;background:var(--code);border:1px solid var(--line);overflow:hidden;min-width:0}
-.seg i{position:absolute;inset:0;background:var(--acc);transform-origin:left;transform:scaleX(0);transition:transform .3s}
-.seg.done i{transform:scaleX(1)}
-.seg.part i{transform:scaleX(var(--p,0));opacity:.55}
-.seg span{position:relative;font:600 11px/26px var(--fMono);padding-left:6px;white-space:nowrap;color:var(--sub)}
+/* 처음 화면 */
+.hero{display:grid;grid-template-columns:minmax(0,1fr) 180px;gap:18px;align-items:end}
+.hero h1{font:400 clamp(30px,6.4vw,46px)/1.08 var(--fDisp);letter-spacing:-.5px;margin-top:8px}
+.hero p{color:var(--sub);margin-top:8px;max-width:46ch}
+.demo{width:180px;height:150px;border-radius:10px;border:1px solid var(--line);background:var(--panel);display:block;max-width:100%}
+.who{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--sub)}
+.who b{color:var(--ink)}
+.who .sv{font:600 12px/1 var(--fMono)}
+.who .sv.bad{color:var(--game)}
+.tracks{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.trk{all:unset;box-sizing:border-box;cursor:pointer;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.trk:hover{border-color:var(--c)}
+.trk .no{font:600 12px/1 var(--fMono);color:var(--c)}
+.trk h2{font:400 24px/1.15 var(--fDisp)}
+.trk p{font-size:14px;color:var(--sub)}
+.mini{display:flex;gap:3px;height:6px}
+.mini i{flex:1;border-radius:2px;background:var(--line)}
+.mini i.on{background:var(--c)}
+.trk .go{font:700 14px/1 var(--fBody);color:var(--c);margin-top:auto}
+.trk.game{--c:var(--game)} .trk.web{--c:var(--web)}
+
+/* 단계 화면 */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px 9px;display:flex;flex-direction:column;gap:8px}
+.brow{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.brow .where{font:600 13px/1.2 var(--fBody);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brow .where b{color:var(--acc);font-family:var(--fMono)}
+.sosbtn{all:unset;cursor:pointer;font:700 13px/1 var(--fBody);color:var(--acc);border:1px solid var(--acc);border-radius:99px;padding:7px 12px;white-space:nowrap}
+.sosbtn:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.segs{display:flex;gap:3px;height:22px}
+.seg{all:unset;box-sizing:border-box;position:relative;border-radius:4px;background:var(--code);border:1px solid var(--line);overflow:hidden;min-width:0;cursor:default}
+.seg.can{cursor:pointer}
+.seg.done{background:var(--acc);border-color:var(--acc)}
+.seg.cur{box-shadow:inset 0 0 0 2px var(--acc)}
+.seg span{position:relative;font:600 10.5px/20px var(--fMono);padding-left:6px;white-space:nowrap;color:var(--sub)}
 .seg.done span{color:#fff}
-.seg:focus-visible{outline:2px solid var(--acc)}
-.ticks{display:flex;justify-content:space-between;font:400 10px/1 var(--fMono);color:var(--sub);margin-top:5px;font-variant-numeric:tabular-nums}
+.ticks{display:flex;justify-content:space-between;font:400 10px/1 var(--fMono);color:var(--sub);font-variant-numeric:tabular-nums}
 
-/* 단계 */
-.steps{display:flex;flex-direction:column;gap:14px;counter-reset:s}
-.step{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;scroll-margin-top:110px}
-.step.cur{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
-.shead{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding:14px 18px;cursor:pointer}
-.num{font:400 28px/1 var(--fDisp);color:var(--acc);min-width:28px}
-.step.ok .num{color:var(--ok)}
-.shead h3{font:700 17px/1.35 var(--fBody)}
-.shead .goal{font-size:13px;color:var(--sub);margin-top:2px}
-.time{font:600 12px/1 var(--fMono);color:var(--sub);white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
-.time .st{display:block;margin-top:6px;font-size:11px;color:var(--ok)}
-.sbody{padding:0 18px 18px 60px;display:flex;flex-direction:column;gap:14px}
-.step:not(.open) .sbody{display:none}
-.why{margin:0;color:var(--sub);font-size:14px;max-width:62ch}
-.todo{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
-.todo label{display:flex;gap:10px;align-items:flex-start;cursor:pointer}
-.todo input{margin-top:5px;accent-color:var(--acc);width:17px;height:17px;flex-shrink:0}
-.todo input:checked+span{color:var(--sub);text-decoration:line-through}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:22px;display:flex;flex-direction:column;gap:18px}
+.shead{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:start}
+.num{font:400 44px/0.9 var(--fDisp);color:var(--acc)}
+.shead h2{font:700 21px/1.3 var(--fBody)}
+.shead .goal{font-size:14px;color:var(--sub);margin-top:3px}
+.time{font:600 12px/1.4 var(--fMono);color:var(--sub);white-space:nowrap;font-variant-numeric:tabular-nums;padding-top:4px}
+.txt{color:var(--ink);max-width:62ch}
 .prompt{border:1px solid var(--line);border-radius:8px;background:var(--code);overflow:hidden}
-.ptop{display:flex;justify-content:space-between;align-items:center;padding:7px 10px 7px 12px;border-bottom:1px solid var(--line)}
-.copy{all:unset;cursor:pointer;font:600 12px/1 var(--fBody);padding:6px 10px;border-radius:5px;background:var(--acc);color:#fff}
-.copy:focus-visible{outline:2px solid var(--ink)}
+.prompt.opt{border-style:dashed}
+.ptop{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px 8px 12px;border-bottom:1px solid var(--line)}
+.ptop .pl{font:700 13px/1.3 var(--fBody);min-width:0}
+.ptop .pl small{font-weight:400;color:var(--sub);margin-left:4px}
+.copy{all:unset;cursor:pointer;font:700 12px/1 var(--fBody);padding:7px 11px;border-radius:5px;background:var(--acc);color:#fff;white-space:nowrap}
 .copy.did{background:var(--ok)}
 .prompt pre{margin:0;padding:12px;font:400 13px/1.7 var(--fMono);white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere}
 .prompt pre mark{background:var(--accSoft);color:var(--acc);border-radius:3px;padding:0 2px;font-weight:600}
+.pchk{display:flex;gap:9px;align-items:center;padding:9px 12px;border-top:1px solid var(--line);font-size:14px;cursor:pointer}
+.todo{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.todo label{display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+input[type=checkbox]{margin:4px 0 0;accent-color:var(--acc);width:18px;height:18px;flex-shrink:0}
+.pchk input{margin:0}
+.todo input:checked+span{color:var(--sub);text-decoration:line-through}
+.todo .auto{font-size:12px;color:var(--sub);margin-left:6px}
 .tip{font-size:13.5px;border-left:3px solid var(--line);padding:2px 0 2px 12px;color:var(--sub);max-width:62ch}
 .tip b{color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{all:unset;cursor:pointer;font-size:14px;padding:7px 13px;border:1px solid var(--line);border-radius:99px;background:var(--panel)}
+.chip[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:#fff}
+.lbl{font-size:13px;color:var(--sub);margin-bottom:6px}
+.fixes{display:flex;flex-direction:column;gap:8px}
+.fixes details{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--code)}
+.fixes summary{cursor:pointer;font-weight:700;font-size:14px}
+.fixes details .prompt{margin-top:10px;background:var(--panel)}
+.prev{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--code);font-size:14px}
+.prev a{color:var(--acc);font-weight:700;word-break:break-all}
 
-.sos h2{font:400 22px/1.2 var(--fDisp);margin-bottom:10px}
-.sosl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.sosl details{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--code);min-width:0}
-.sosl summary{cursor:pointer;font-weight:700;font-size:14px}
-.sosl details p{margin:8px 0 6px;font-size:13.5px;color:var(--sub)}
-.foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:var(--sub);font-size:13px}
-.reset{all:unset;cursor:pointer;text-decoration:underline}
-.reset.arm{color:var(--game);font-weight:700}
+.nav{position:sticky;bottom:0;z-index:20;display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;background:var(--bg);padding-block:10px calc(10px + env(safe-area-inset-bottom,0px))}
+.nav .btn{flex:1}
+.nav .btn.line{flex:0 0 auto}
+.left{flex:0 0 100%;font-size:12.5px;color:var(--sub);text-align:center}
+
+/* 막혔을 때 */
+.sheet{position:fixed;inset:0;z-index:40;background:rgba(10,14,18,.45);display:flex;align-items:flex-end;justify-content:center}
+.sheet .in{background:var(--panel);width:100%;max-width:760px;max-height:84vh;overflow:auto;border-radius:14px 14px 0 0;padding:20px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:12px}
+.sheet h2{font:400 22px/1.2 var(--fDisp)}
+.sheet .x{align-self:flex-end}
+
+.done{text-align:left;display:flex;flex-direction:column;gap:14px}
+.done h2{font:400 30px/1.15 var(--fDisp);color:var(--acc)}
+.foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:var(--sub);font-size:12.5px}
 
 @media (max-width:640px){
-  .fields{grid-template-columns:1fr}
-  .sbody{padding-left:18px}
-  .sosl{grid-template-columns:1fr}
+  .grow,.tracks{grid-template-columns:1fr}
+  .hero{grid-template-columns:1fr}
+  .demo{width:100%;height:120px}
   .seg span{display:none}
-  .tk b{font-size:19px}
+  .card{padding:18px}
+  .num{font-size:36px}
 }
-
-.gate{display:flex;flex-direction:column;gap:14px}
-.gate h2{font:400 24px/1.2 var(--fDisp)}
-.gate p{margin:0;color:var(--sub);font-size:14px;max-width:60ch}
-.grow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.gate label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--sub);min-width:0}
-.gate input{font:500 16px/1.4 var(--fBody);color:var(--ink);background:var(--code);border:1px solid var(--line);border-radius:6px;padding:10px;min-width:0;font-variant-numeric:tabular-nums}
-.gate input:focus{outline:2px solid var(--acc);border-color:transparent}
-.gbtns{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.btn{all:unset;cursor:pointer;font:700 15px/1 var(--fBody);padding:12px 18px;border-radius:8px;background:var(--acc);color:#fff}
-.btn[disabled]{opacity:.5;cursor:default}
-.btn:focus-visible,.ghost:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
-.ghost{all:unset;cursor:pointer;font-size:13px;color:var(--sub);text-decoration:underline}
-.gmsg{font-size:13.5px;color:var(--game);min-height:1em}
-.who{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--sub);background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:6px 8px 6px 14px}
-.who b{color:var(--ink);font-weight:700}
-.who .sv{font:600 12px/1 var(--fMono)}
-.who .sv.bad{color:var(--game)}
-.who .ghost{padding:0 6px}
-@media (max-width:640px){.grow{grid-template-columns:1fr}}
-@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
-<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 </head>
-<body>
+<body class="game">
+<div class="wrap" id="app">
 
-
-<div class="wrap">
-  <header class="top">
-    <div>
-      <div class="eyebrow">방과후 · 바이브코딩 실습 · 60분</div>
-      <h1>AI랑 <span id="ttl">게임</span> 만들기</h1>
-      <p>ChatGPT에게 말로 시키고, 실행해 보고, 고쳐 달라고 하는 걸 한 시간 동안 여섯 번 반복합니다.</p>
-    </div>
-    <div class="who" id="who" hidden></div>
-  </header>
-
-  <section class="panel gate" id="gate" aria-labelledby="gateH">
+  <section class="panel gate screen" id="gate" aria-labelledby="gateH">
+    <div class="eyebrow">방과후 · 바이브코딩 실습</div>
     <h2 id="gateH">수업 페이지 계정으로 로그인</h2>
     <p>로그인하면 진행 상황이 저장돼서 다른 노트북에서 열어도 이어서 할 수 있어요. 수업 페이지와 같은 학번·이름·PIN이에요.</p>
-    <div class="grow" id="gStep1">
-      <label for="gId">학번<input id="gId" inputmode="numeric" maxlength="5" autocomplete="off" placeholder="예: 30403"></label>
-      <label for="gName">이름<input id="gName" autocomplete="off" placeholder="예: 홍길동"></label>
+    <div class="grow">
+      <label class="f" for="gId">학번<input id="gId" inputmode="numeric" maxlength="5" autocomplete="off" placeholder="예: 30403"></label>
+      <label class="f" for="gName">이름<input id="gName" autocomplete="off" placeholder="예: 홍길동"></label>
     </div>
     <div class="grow" id="gStepPin" hidden>
-      <label for="gPin">PIN (숫자 4자리)<input id="gPin" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></label>
+      <label class="f" for="gPin">PIN (숫자 4자리)<input id="gPin" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></label>
     </div>
     <div class="grow" id="gStepSetup" hidden>
-      <label for="gCode">휴대폰 번호 뒤 4자리<input id="gCode" inputmode="numeric" maxlength="4" autocomplete="off"></label>
-      <label for="gNew">새로 정할 PIN (숫자 4자리)<input id="gNew" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></label>
+      <label class="f" for="gCode">휴대폰 번호 뒤 4자리<input id="gCode" inputmode="numeric" maxlength="4" autocomplete="off"></label>
+      <label class="f" for="gNew">새로 정할 PIN (숫자 4자리)<input id="gNew" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></label>
     </div>
     <div class="gmsg" id="gMsg" role="status"></div>
     <div class="gbtns">
@@ -178,188 +188,259 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
     </div>
   </section>
 
-  <div id="main" hidden style="display:contents">
+  <div id="view" hidden></div>
+</div>
 
-  <div class="tracks" role="group" aria-label="만들 것 고르기">
-    <button class="tk" id="tk-game" data-t="game" aria-pressed="true"><b>게임</b><small>탭·클릭으로 하는 한 화면 게임</small></button>
-    <button class="tk" id="tk-web" data-t="web" aria-pressed="false"><b>웹페이지</b><small>소개·도감·포트폴리오 같은 한 장짜리 사이트</small></button>
-  </div>
-
-  <section class="panel idea" aria-labelledby="ideaH">
-    <h2 id="ideaH">내 아이디어 세 칸만 채우기</h2>
-    <div class="fields" id="fields"></div>
-    <div class="ex" id="examples"></div>
-  </section>
-
-  <div class="ruler" aria-label="진행 상황">
-    <div class="rhead"><span class="eyebrow">진행</span><b><em id="pct">0</em> / <span id="tot">0</span> 완료</b></div>
-    <div class="bar" id="bar"></div>
-    <div class="ticks"><span>0분</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>60분</span></div>
-  </div>
-
-  <div class="steps" id="steps"></div>
-
-  <section class="panel sos" aria-labelledby="sosH">
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sosH">
+  <div class="in">
+    <button class="ghost x" id="sosX">닫기</button>
     <h2 id="sosH">막혔을 때</h2>
-    <div class="sosl" id="sos"></div>
-  </section>
-
-  </div>
-  <div class="foot">
-    <span id="footNote">체크한 내용은 이 기기에만 저장돼요.</span>
-    <button class="reset" id="reset">처음부터 다시</button>
+    <div class="fixes" id="sosList"></div>
   </div>
 </div>
 
 <script>
+/* ───── 내용 ─────
+ * 모두 같은 주제: 1회차는 과일 받기 게임, 2회차는 그 게임을 소개하는 웹페이지.
+ * 블록 종류: text, field(입력칸), chips(고르기), prompt(복사할 요청문 + 보냈어요 체크), todo(할 일), fixes(자주 생기는 고장), tip, gamelink */
+var MOODS=["레트로 픽셀","파스텔","네온","흑백 미니멀","동화책"];
 var DATA={
- game:{
-  name:"게임",
-  fields:[["a","무슨 게임?","예: 떨어지는 과일 받기"],["b","조작은?","예: 좌우 화살표 / 화면 터치"],["c","언제 끝나?","예: 3개 놓치면 게임오버"]],
-  examples:[
-   ["과일 받기",["떨어지는 과일을 바구니로 받는 게임","좌우 화살표, 폰은 화면 왼쪽·오른쪽 터치","과일 3개 놓치면 게임오버"]],
-   ["색 찾기",["16칸 중 색이 살짝 다른 한 칸 찾기","칸을 클릭·터치","30초 안에 몇 개 찾는지"]],
-   ["반응속도",["화면이 초록으로 바뀌는 순간 누르기","아무 데나 클릭·터치","5번 평균 반응속도 기록"]],
-   ["운석 피하기",["위에서 내려오는 운석 피하기","마우스나 손가락으로 우주선 이동","부딪히면 끝, 버틴 시간이 점수"]]
-  ],
-  steps:[
-   {t:"아이디어를 한 문장으로",m:[0,5],goal:"누가, 뭘 하고, 언제 끝나는지",
-    why:"ChatGPT는 애매하게 말하면 애매하게 만들어요. 위의 세 칸을 채우면 다음 단계 요청문이 자동으로 완성됩니다.",
-    todo:["위의 세 칸 채우기","옆 사람한테 10초 안에 설명해 보기"],
-    tip:"<b>욕심은 나중에.</b> 캐릭터, 스토리, 레벨 10개는 지금 넣지 마세요. 한 시간 안에 '돌아가는 것'이 먼저예요."},
-   {t:"제일 작은 버전 만들기",m:[5,15],goal:"조작 하나, 화면 하나",
-    why:"처음부터 다 시키면 어디가 고장 났는지 못 찾아요. 움직이기만 하는 상태를 먼저 받습니다.",
-    prompt:"HTML 파일 하나로 브라우저에서 바로 실행되는 간단한 게임을 만들어 줘.\n게임: {a}\n조작: {b}\n끝나는 조건: {c}\n\n지금은 점수, 효과음, 꾸미기 없이 기본 동작만 되게 해 줘.\nPC와 폰 둘 다에서 조작할 수 있게 해 줘.\n캔버스로 열어서 미리보기로 바로 해 볼 수 있게 해 줘.",
-    todo:["요청문 복사해서 ChatGPT에게 보내기","캔버스 오른쪽 위 미리보기로 실행하기","직접 한 판 해 보기"],
-    tip:"<b>코드만 길게 나오고 캔버스가 안 열리면</b> \"이 코드 캔버스로 열어 줘\"라고 한 번 더 말하세요."},
-   {t:"실행해 보고 고장 고치기",m:[15,25],goal:"이상한 점을 그대로 말하기",
-    why:"버그는 당연히 나와요. 고치는 요령은 '본 것'을 그대로 전달하는 겁니다. 추측해서 말하지 않기.",
-    prompt:"해 보니까 이렇게 돼: [본 것 그대로 적기]\n내가 원하는 건: [원래 되어야 하는 모습]\n다른 부분은 건드리지 말고 이것만 고쳐 줘.",
-    todo:["이상한 점 하나 찾기","[ ] 부분 채워서 보내기","고쳐졌는지 다시 해 보기"],
-    tip:"<b>빨간 오류 글자가 보이면</b> 그 글자를 통째로 복사해서 붙여 넣는 게 제일 빨라요."},
-   {t:"재미 하나씩 더하기",m:[25,40],goal:"한 번에 기능 하나",
-    why:"점수 → 시간 제한 → 점점 빨라지기 순으로, 하나 넣고 해 보고, 또 하나 넣습니다.",
-    prompt:"지금 게임에 이것 하나만 추가해 줘: [점수 표시 / 제한 시간 / 점점 어려워지기 / 최고 기록 저장]\n추가한 다음에도 기존 조작은 그대로 되게 해 줘.",
-    todo:["점수 넣기","다시 시작 버튼 넣기","하나 더 골라서 넣기"],
-    tip:"<b>한 번에 세 개 시키면</b> 셋 다 어설프게 나와요. 꼭 하나씩."},
-   {t:"디자이너답게 꾸미기",m:[40,50],goal:"색·글꼴·느낌을 구체적으로",
-    why:"\"예쁘게 해 줘\"는 아무 말도 안 한 거예요. 디자인과답게 색, 분위기, 참고할 스타일을 정확히 말하세요.",
-    prompt:"게임 기능은 그대로 두고 디자인만 바꿔 줘.\n분위기: [예: 레트로 픽셀 / 파스텔 / 네온 / 흑백 미니멀]\n색: [배경색, 강조색 2~3개]\n글꼴 느낌: [예: 두껍고 둥근 / 얇고 깔끔한]\n점수나 게임오버 화면도 같은 느낌으로 맞춰 줘.",
-    todo:["분위기·색 정해서 보내기","게임오버 화면까지 확인","폰 화면에서 글자 잘림 없는지 보기"],
-    tip:"<b>마음에 안 들면</b> 캔버스 위쪽의 이전 버전 버튼으로 돌아가거나, \"방금 전 디자인으로 되돌려 줘\"라고 말하세요."},
-   {t:"테스트하고 공유하기",m:[50,60],goal:"남이 해 봐도 되는지",
-    why:"내가 만든 건 나만 쉬워요. 옆 사람에게 설명 없이 시켜 보고 막히는 곳을 마지막으로 고칩니다.",
-    prompt:"처음 하는 사람도 알 수 있게 시작 화면에 게임 방법을 한두 줄로 넣어 줘.\n그리고 완성된 코드를 HTML 파일 하나로 정리해 줘.",
-    todo:["옆 사람한테 설명 없이 한 판 시키기","막힌 곳 하나 고치기","완성본 저장하기 (캔버스 공유 링크 또는 코드 복사해 .html 파일로)","한 줄 소개 쓰기: 무슨 게임이고 어디가 재밌는지"],
-    tip:"<b>오늘 다 못 끝냈어도 괜찮아요.</b> 다음 시간에 ChatGPT 왼쪽 목록에서 같은 대화를 열고 이어서 \"지난번 게임 이어서 하자\"로 시작하면 됩니다."}
-  ]},
- web:{
-  name:"웹페이지",
-  fields:[["a","무슨 페이지?","예: 내가 좋아하는 카페 도감"],["b","누가 볼 거야?","예: 우리 반 친구들"],["c","분위기는?","예: 따뜻한 손글씨 느낌"]],
-  examples:[
-   ["자기소개",["나를 소개하는 한 장짜리 페이지","새 학기에 만나는 사람들","깔끔하고 밝은 느낌"]],
-   ["최애 도감",["내가 좋아하는 캐릭터·물건을 카드로 모은 도감","같은 걸 좋아하는 친구들","잡지 같은 느낌"]],
-   ["포트폴리오",["내 디자인 작업 6개를 보여 주는 포트폴리오","입시·취업 담당자","미니멀, 작품이 돋보이게"]],
-   ["동아리 홍보",["우리 동아리를 소개하고 신청을 받는 페이지","신입생","활기차고 컬러풀하게"]]
-  ],
-  steps:[
-   {t:"아이디어를 한 문장으로",m:[0,5],goal:"무엇을, 누구에게, 어떤 느낌으로",
-    why:"보는 사람이 정해지면 들어갈 내용과 말투가 정해져요. 위의 세 칸을 채우면 다음 단계 요청문이 자동으로 완성됩니다.",
-    todo:["위의 세 칸 채우기","보는 사람이 이 페이지에서 꼭 알아야 할 것 하나 정하기"],
-    tip:"<b>한 장이면 충분해요.</b> 메뉴 여러 개, 로그인, 게시판은 오늘 범위 밖이에요."},
-   {t:"구조부터 받기",m:[5,15],goal:"코드 말고 목차 먼저",
-    why:"바로 만들라고 하면 ChatGPT 마음대로 채워요. 섹션 구성을 먼저 받고, 빼고 더한 다음 만들게 합니다.",
-    prompt:"웹페이지를 만들려고 해. 아직 코드는 쓰지 말고 구성만 제안해 줘.\n주제: {a}\n보는 사람: {b}\n분위기: {c}\n\n위에서부터 아래로 어떤 섹션이 들어가면 좋을지 4~6개로 정리해 줘.",
-    todo:["요청문 복사해서 ChatGPT에게 보내기","섹션 중 빼거나 바꿀 것 고르기","\"이 구성으로 확정\"이라고 답하기"],
-    tip:"<b>구성이 별로면</b> \"○○ 섹션은 빼고 △△를 넣어 줘\"처럼 구체적으로 말하세요."},
-   {t:"첫 화면 만들기",m:[15,25],goal:"일단 전체를 한 번 띄우기",
-    why:"확정한 구성으로 페이지 전체를 받아요. 내용은 아직 대충이어도 됩니다.",
-    prompt:"확정한 구성으로 HTML 파일 하나짜리 웹페이지를 만들어 줘.\n폰과 PC 둘 다에서 보기 좋게 해 줘.\n내용이 정해지지 않은 곳은 임시 글로 채우고 표시해 줘.\n캔버스로 열어서 미리보기로 볼 수 있게 해 줘.",
-    todo:["캔버스 미리보기로 열어 보기","창을 좁혀서 폰 크기에서도 보기","이상한 점 하나 적어 두기"],
-    tip:"<b>고칠 땐</b> \"해 보니 [본 것]인데 [원하는 것]으로 바꿔 줘. 다른 데는 건드리지 마\" 형식이 제일 잘 통해요."},
-   {t:"진짜 내용 넣고 기능 하나",m:[25,40],goal:"내 글·내 사진 + 움직이는 것 하나",
-    why:"임시 글을 내 내용으로 바꾸고, 페이지에 손맛을 주는 기능을 딱 하나 넣습니다.",
-    prompt:"[섹션 이름]의 임시 글을 아래 내용으로 바꿔 줘:\n[내 내용 붙여넣기]\n\n그리고 이 기능 하나만 추가해 줘: [카드 누르면 자세히 보기 / 분류 버튼으로 거르기 / 위로 가기 버튼 / 다크모드 전환]",
-    todo:["임시 글 전부 내 내용으로 바꾸기","기능 하나 넣기","눌러 보고 잘 되는지 확인"],
-    tip:"<b>사진은</b> ChatGPT 대화창에 올리고 \"이 사진 넣어 줘\"라고 하면 돼요. 안 되면 일단 \"사진 자리만 만들어 줘\"."},
-   {t:"디자이너답게 다듬기",m:[40,50],goal:"색·글꼴·여백을 구체적으로",
-    why:"\"예쁘게\"는 아무 말도 안 한 거예요. 수업에서 배운 말로 지시하세요. 대비, 여백, 위계, 정렬.",
-    prompt:"내용과 기능은 그대로 두고 디자인만 다듬어 줘.\n색: [배경색, 글자색, 강조색]\n글꼴 느낌: [예: 제목은 굵고 개성 있게, 본문은 읽기 편하게]\n여백·정렬: [예: 여백 넉넉하게, 왼쪽 정렬]\n폰에서도 글자가 잘리거나 가로로 밀리지 않게 해 줘.",
-    todo:["색·글꼴 지시 보내기","제목과 본문 크기 차이 확인","폰·PC 둘 다 확인"],
-    tip:"<b>마음에 안 들면</b> 캔버스 위쪽의 이전 버전 버튼으로 돌아가거나, \"방금 전 디자인으로 되돌려 줘\"라고 말하세요."},
-   {t:"확인하고 공유하기",m:[50,60],goal:"보는 사람 눈으로 다시 보기",
-    why:"1단계에서 정한 '꼭 알아야 할 것'이 3초 안에 보이는지 확인하고 마무리합니다.",
-    prompt:"완성된 페이지를 HTML 파일 하나로 정리해 줘.\n그리고 처음 보는 사람 입장에서 헷갈릴 만한 곳이 있으면 세 가지만 알려 줘.",
-    todo:["옆 사람한테 3초 보여 주고 뭐 하는 페이지인지 물어보기","헷갈린 곳 하나 고치기","완성본 저장하기 (캔버스 공유 링크 또는 코드 복사해 .html 파일로)","한 줄 소개 쓰기: 누구를 위한 페이지인지"],
-    tip:"<b>오늘 다 못 끝냈어도 괜찮아요.</b> 다음 시간에 ChatGPT 왼쪽 목록에서 같은 대화를 열고 이어서 \"지난번 페이지 이어서 하자\"로 시작하면 됩니다."}
-  ]}
+ game:{name:"게임 만들기",no:"1회차",desc:"위에서 떨어지는 과일을 바구니로 받는 게임. 과일 3개를 놓치면 끝나요.",steps:[
+  {t:"준비하고 이름 정하기",m:[0,5],goal:"오늘 만들 게임 알아보기",b:[
+   {k:"text",v:"오늘은 모두 같은 게임을 만들어요. 위에서 과일이 떨어지고, 아래 바구니를 왼쪽·오른쪽으로 움직여 받는 게임이에요. 과일을 3개 놓치면 끝나요."},
+   {k:"field",f:"name",label:"내 게임 이름",ph:"예: 과일 바구니"},
+   {k:"todo",items:[
+    {id:"g1a",t:"ChatGPT(chatgpt.com) 열고 로그인하기"},
+    {id:"g1b",t:"왼쪽 위 '새 채팅' 누르기"},
+    {id:"g1c",t:"게임 이름 정하기",auto:function(){return !!S.name.trim()}}]},
+   {k:"tip",v:"<b>이름은 나중에 바꿔도 돼요.</b> 오늘 만든 게임은 다음 시간에 만들 웹페이지의 주인공이 돼요."}]},
+  {t:"제일 작은 버전 만들기",m:[5,15],goal:"과일이 떨어지고 바구니가 움직이기만",b:[
+   {k:"text",v:"처음부터 점수·목숨·꾸미기를 다 시키면 어디가 고장 났는지 못 찾아요. 움직이는 것만 먼저 받아요."},
+   {k:"prompt",id:"g2p",label:"ChatGPT에게 보낼 말",v:"HTML 파일 하나로 브라우저에서 바로 실행되는 과일 받기 게임을 만들어 줘.\n게임 이름: {name}\n화면 위에서 과일이 하나씩 떨어지고, 아래 바구니를 왼쪽·오른쪽으로 움직여서 받는 게임이야.\n조작: 키보드는 왼쪽·오른쪽 화살표, 터치 화면은 화면 왼쪽 반·오른쪽 반 누르기\n지금은 점수, 효과음, 꾸미기 없이 과일이 떨어지고 바구니가 움직이는 것만 되게 해 줘.\n캔버스로 열어서 미리보기로 바로 해 볼 수 있게 해 줘."},
+   {k:"todo",items:[
+    {id:"g2a",t:"캔버스 오른쪽 위 미리보기 버튼으로 실행하기"},
+    {id:"g2b",t:"바구니를 움직여 과일 하나 받아 보기"}]},
+   {k:"tip",v:"<b>코드만 길게 나오고 캔버스가 안 열리면</b> \"이 코드 캔버스로 열어 줘\"라고 한 번 더 말하세요."}]},
+  {t:"실행해 보고 고장 고치기",m:[15,25],goal:"본 것을 그대로 말하기",b:[
+   {k:"text",v:"고장은 꼭 나요. 고칠 때는 내가 본 것과 원하는 것을 그대로 말하면 돼요. 아래에서 내 고장과 같은 걸 찾아 보내세요."},
+   {k:"fixes",items:[
+    ["과일이 너무 빨라요 / 느려요","과일 떨어지는 속도가 너무 [빠르다 / 느리다]. 처음에는 천천히 떨어지게 바꿔 줘. 다른 부분은 건드리지 마."],
+    ["바구니가 화면 밖으로 나가요","바구니가 화면 밖으로 나가 버려. 화면 양쪽 끝에서 멈추게 해 줘. 다른 부분은 건드리지 마."],
+    ["과일이 바구니를 그냥 지나가요","과일이 바구니에 닿았는데 사라지지 않고 그냥 지나가. 바구니에 닿으면 받은 걸로 처리해서 과일이 사라지게 해 줘. 다른 부분은 건드리지 마."],
+    ["터치로는 안 움직여요","터치 화면에서 눌러도 바구니가 안 움직여. 화면 왼쪽 반을 누르고 있으면 왼쪽, 오른쪽 반을 누르고 있으면 오른쪽으로 움직이게 해 줘."],
+    ["목록에 없는 고장이에요","해 보니까 이렇게 돼: [본 것 그대로 적기]\n내가 원하는 건: [원래 되어야 하는 모습]\n다른 부분은 건드리지 말고 이것만 고쳐 줘."]]},
+   {k:"todo",items:[{id:"g3a",t:"고장 하나 고치고 다시 해 보기"}]},
+   {k:"tip",v:"<b>빨간 오류 글자가 보이면</b> 그 글자를 통째로 복사해서 붙여 넣는 게 제일 빨라요."}]},
+  {t:"규칙 넣기",m:[25,40],goal:"한 번에 하나씩, 넣고 해 보고",b:[
+   {k:"text",v:"아래 순서대로 하나 보내고, 해 보고, 다음 것을 보내세요. 한 번에 다 보내면 다 어설프게 나와요."},
+   {k:"prompt",id:"g4a",label:"① 점수",v:"지금 게임에 이것 하나만 추가해 줘: 과일을 받을 때마다 1점, 화면 위쪽에 점수 표시.\n기존 조작은 그대로 되게 해 줘."},
+   {k:"prompt",id:"g4b",label:"② 목숨과 게임 오버",v:"지금 게임에 이것 하나만 추가해 줘: 목숨 3개. 과일을 놓쳐서 바닥에 닿으면 목숨이 하나 줄고, 0이 되면 '게임 오버'와 최종 점수를 보여 줘.\n기존 점수와 조작은 그대로 되게 해 줘."},
+   {k:"prompt",id:"g4c",label:"③ 다시 시작",v:"게임 오버 화면에 '다시 시작' 버튼을 넣어 줘. 누르면 점수와 목숨이 처음 상태로 돌아가게 해 줘."},
+   {k:"prompt",id:"g4d",opt:1,label:"④ 여유 있으면: 점점 어렵게",v:"점수가 10점 오를 때마다 과일이 조금씩 더 빨리 떨어지게 해 줘. 다른 부분은 그대로 둬."}]},
+  {t:"디자이너답게 꾸미기",m:[40,50],goal:"분위기와 색을 정확히 말하기",b:[
+   {k:"text",v:"\"예쁘게 해 줘\"는 아무 말도 안 한 거예요. 분위기와 색을 정해서 정확히 말하세요. 여기서 정한 분위기는 다음 시간 웹페이지에도 그대로 써요."},
+   {k:"chips",f:"mood",label:"분위기",opts:MOODS},
+   {k:"field",f:"colors",label:"색 (배경색, 강조색 2~3개)",ph:"예: 남색 배경, 노랑·주황 강조"},
+   {k:"prompt",id:"g5p",label:"ChatGPT에게 보낼 말",v:"게임 기능은 그대로 두고 디자인만 바꿔 줘.\n분위기: {mood}\n색: {colors}\n과일, 바구니, 배경, 점수, 게임 오버 화면을 모두 같은 느낌으로 맞춰 줘.\n작은 화면에서도 글자가 잘리지 않게 해 줘."},
+   {k:"todo",items:[{id:"g5a",t:"게임 오버 화면까지 같은 느낌인지 확인"}]},
+   {k:"tip",v:"<b>마음에 안 들면</b> 캔버스 위쪽의 이전 버전 버튼으로 돌아가거나 \"방금 전 디자인으로 되돌려 줘\"라고 말하세요."}]},
+  {t:"테스트하고 저장하기",m:[50,60],goal:"다음 시간에 쓸 수 있게",b:[
+   {k:"prompt",id:"g6p",label:"ChatGPT에게 보낼 말",v:"처음 하는 사람도 알 수 있게 시작 화면에 게임 이름 '{name}'과 게임 방법을 한두 줄로 넣고, '시작' 버튼을 눌러야 게임이 시작되게 해 줘."},
+   {k:"todo",items:[
+    {id:"g6a",t:"옆 사람한테 설명 없이 한 판 시키기"},
+    {id:"g6b",t:"ChatGPT 오른쪽 위 공유 버튼으로 링크 만들기"}]},
+   {k:"field",f:"glink",label:"내 게임 링크",ph:"공유 링크 붙여넣기 (https://…)"},
+   {k:"todo",items:[{id:"g6c",t:"게임 링크 붙여 넣기",auto:function(){return isLink(S.glink)}}]},
+   {k:"tip",v:"<b>대화를 지우지 마세요.</b> 다음 시간에 이 대화를 이어서 게임 소개 웹페이지를 만들어요."}]}
+ ]},
+ web:{name:"게임 소개 페이지 만들기",no:"2회차",desc:"지난 시간에 만든 과일 받기 게임을 소개하는 한 장짜리 웹페이지.",steps:[
+  {t:"준비하기",m:[0,5],goal:"지난 시간 게임 다시 열기",b:[
+   {k:"text",v:"오늘은 지난 시간에 만든 게임을 소개하는 한 장짜리 웹페이지를 만들어요. 게임 이름, 게임 방법, 게임 화면, 만든 사람이 들어가요."},
+   {k:"gamelink"},
+   {k:"field",f:"name",label:"게임 이름",ph:"예: 과일 바구니"},
+   {k:"field",f:"line",label:"한 줄 소개",ph:"예: 바구니로 과일을 받는 게임"},
+   {k:"todo",items:[
+    {id:"w1a",t:"지난 시간 ChatGPT 대화 열기 (왼쪽 목록)"},
+    {id:"w1b",t:"게임 화면 캡처 1장 찍어 두기 (윈도우: Win + Shift + S)"},
+    {id:"w1c",t:"게임 이름과 한 줄 소개 채우기",auto:function(){return !!(S.name.trim()&&S.line.trim())}}]}]},
+  {t:"구조부터 받기",m:[5,15],goal:"코드 말고 목차 먼저",b:[
+   {k:"text",v:"바로 만들라고 하면 ChatGPT 마음대로 채워요. 섹션 구성을 먼저 받고, 확정한 다음 만들게 해요."},
+   {k:"prompt",id:"w2p",label:"ChatGPT에게 보낼 말",v:"내가 만든 웹 게임 '{name}'을 소개하는 한 장짜리 웹페이지를 만들려고 해. 아직 코드는 쓰지 말고 구성만 제안해 줘.\n게임 내용: 위에서 떨어지는 과일을 바구니로 받는 게임, 과일 3개를 놓치면 끝\n한 줄 소개: {line}\n꼭 넣을 섹션: 게임 이름과 한 줄 소개가 있는 첫 화면, 게임 방법, 게임 화면, 만든 사람\n이 밖에 넣으면 좋을 섹션은 1~2개만 더 제안해 줘."},
+   {k:"todo",items:[
+    {id:"w2a",t:"제안 중 뺄 것·넣을 것 고르기"},
+    {id:"w2b",t:"\"이 구성으로 확정\"이라고 답하기"}]},
+   {k:"tip",v:"<b>구성이 별로면</b> \"○○ 섹션은 빼고 △△를 넣어 줘\"처럼 구체적으로 말하세요."}]},
+  {t:"페이지 만들기",m:[15,25],goal:"일단 전체를 한 번 띄우기",b:[
+   {k:"prompt",id:"w3p",label:"ChatGPT에게 보낼 말",v:"확정한 구성으로 HTML 파일 하나짜리 웹페이지를 만들어 줘.\nPC와 폰 둘 다에서 보기 좋게 해 줘.\n내용이 아직 없는 곳은 임시 글로 채워 줘.\n캔버스로 열어서 미리보기로 볼 수 있게 해 줘."},
+   {k:"todo",items:[
+    {id:"w3a",t:"미리보기로 열어 보기"},
+    {id:"w3b",t:"창을 좁혀서 폰 크기에서도 보기"}]},
+   {k:"tip",v:"<b>고칠 땐</b> \"해 보니 [본 것]인데 [원하는 것]으로 바꿔 줘. 다른 데는 건드리지 마\" 형식이 제일 잘 통해요."}]},
+  {t:"진짜 내용 넣기",m:[25,40],goal:"내 글, 내 게임 화면",b:[
+   {k:"text",v:"임시 글을 내 내용으로 바꿔요. 이것도 하나씩 보내고 확인하세요."},
+   {k:"prompt",id:"w4a",label:"① 게임 화면",note:"캡처를 대화창 + 버튼으로 먼저 올리고 보내기",v:"첨부한 게임 화면 캡처를 '게임 화면' 섹션에 넣어 줘."},
+   {k:"prompt",id:"w4b",label:"② 만든 사람",v:"'만든 사람' 섹션의 임시 글을 아래 내용으로 바꿔 줘.\n이름: [내 이름 또는 닉네임]\n한마디: [만들면서 느낀 점 한 줄]"},
+   {k:"prompt",id:"w4c",opt:1,label:"③ 여유 있으면: 페이지에서 바로 플레이",v:"페이지에 '지금 플레이' 버튼을 넣고, 누르면 지난 시간에 만든 게임이 페이지 안에서 바로 실행되게 해 줘. 게임 코드는 아래에 붙일게.\n[게임 코드 붙여넣기]"}]},
+  {t:"게임과 같은 느낌으로 다듬기",m:[40,50],goal:"게임이랑 한 세트처럼",b:[
+   {k:"text",v:"지난 시간 게임에서 고른 분위기와 색이 미리 들어가 있어요. 그대로 써도 되고 바꿔도 돼요."},
+   {k:"chips",f:"mood",label:"분위기",opts:MOODS},
+   {k:"field",f:"colors",label:"색 (배경색, 강조색 2~3개)",ph:"예: 남색 배경, 노랑·주황 강조"},
+   {k:"prompt",id:"w5p",label:"ChatGPT에게 보낼 말",v:"내용과 기능은 그대로 두고 디자인만 다듬어 줘.\n지난 시간 게임과 같은 분위기로: {mood}\n색: {colors}\n제목은 크고 굵게, 본문은 읽기 편하게, 섹션 사이 여백은 넉넉하게 해 줘.\n폰에서도 글자가 잘리거나 가로로 밀리지 않게 해 줘."},
+   {k:"todo",items:[
+    {id:"w5a",t:"제목과 본문 크기 차이가 분명한지 확인"},
+    {id:"w5b",t:"폰 크기·PC 크기 둘 다 확인"}]}]},
+  {t:"확인하고 저장하기",m:[50,60],goal:"처음 보는 사람 눈으로",b:[
+   {k:"prompt",id:"w6p",label:"ChatGPT에게 보낼 말",v:"처음 보는 사람 입장에서 이 페이지에 헷갈리는 곳이 있으면 세 가지만 알려 줘."},
+   {k:"todo",items:[
+    {id:"w6a",t:"옆 사람한테 3초 보여 주고 무슨 게임인지 물어보기"},
+    {id:"w6b",t:"헷갈린 곳 하나 고치기"},
+    {id:"w6c",t:"ChatGPT 오른쪽 위 공유 버튼으로 링크 만들기"}]},
+   {k:"field",f:"wlink",label:"내 웹페이지 링크",ph:"공유 링크 붙여넣기 (https://…)"},
+   {k:"todo",items:[{id:"w6d",t:"웹페이지 링크 붙여 넣기",auto:function(){return isLink(S.wlink)}}]}]}
+ ]}
 };
 var SOS=[
- ["화면이 하얗게 아무것도 안 나와요","오류가 있다는 뜻이에요. 그대로 말하세요.","화면이 하얗게 아무것도 안 나와. 원인 찾아서 고쳐 줘."],
- ["고쳐 달랬는데 그대로예요","ChatGPT가 다른 곳을 고쳤을 수 있어요. 위치를 짚어 주세요.","아직 그대로야. [어디]에서 [무슨 일]이 생겨. 그 부분 코드를 다시 확인해 줘."],
- ["너무 많이 바뀌어 버렸어요","한 단계 되돌리고 범위를 좁혀서 다시 시키세요.","방금 바꾼 거 취소하고 이전 버전으로 돌려 줘. 그다음 [이것]만 바꿔 줘."],
- ["뭘 더 해야 할지 모르겠어요","ChatGPT에게 다음 할 일을 물어보세요. 고르는 건 내가 합니다.","지금 상태에서 30분 안에 넣을 수 있는 개선점 3개만 추천해 줘. 쉬운 순서로."]
+ ["화면이 하얗게 아무것도 안 나와요","화면이 하얗게 아무것도 안 나와. 원인 찾아서 고쳐 줘."],
+ ["고쳐 달랬는데 그대로예요","아직 그대로야. [어디]에서 [무슨 일]이 생겨. 그 부분 코드를 다시 확인해 줘."],
+ ["너무 많이 바뀌어 버렸어요","방금 바꾼 거 취소하고 이전 버전으로 돌려 줘. 그다음 [이것]만 바꿔 줘."],
+ ["캔버스·미리보기가 안 열려요","이 코드 캔버스로 열어서 미리보기로 볼 수 있게 해 줘."],
+ ["뭘 더 해야 할지 모르겠어요","지금 상태에서 10분 안에 넣을 수 있는 개선점 3개만 추천해 줘. 쉬운 순서로."]
 ];
-var KEY="vibeGuide1",S={t:"game",f:{game:{},web:{}},c:{game:{},web:{}},open:{game:0,web:0}};
-try{var sv=JSON.parse(localStorage.getItem(KEY)||"null");if(sv&&sv.f)S=Object.assign(S,sv)}catch(e){}
-var h=(location.hash||"").slice(1);if(h==="game"||h==="web")S.t=h;
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}if(window.vibeSync)vibeSync()}
-function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
-function $(id){return document.getElementById(id)}
-function fill(p,mark){var f=S.f[S.t],d=DATA[S.t];return p.replace(/\{(\w)\}/g,function(_,k){var v=(f[k]||"").trim();var fd=d.fields.filter(function(x){return x[0]===k})[0];
-  if(!mark)return v||("["+fd[1].replace("?","")+"]");return '<mark>'+esc(v||("["+fd[1].replace("?","")+"]"))+'</mark>'})}
-function renderFields(){var d=DATA[S.t],f=S.f[S.t];
- $("fields").innerHTML=d.fields.map(function(x){return '<label for="f-'+S.t+'-'+x[0]+'">'+x[1]+'<input id="f-'+S.t+'-'+x[0]+'" data-k="'+x[0]+'" placeholder="'+esc(x[2])+'" value="'+esc(f[x[0]]||"")+'"></label>'}).join("");
- $("examples").innerHTML='<span>예시로 채우기</span>'+d.examples.map(function(e,i){return '<button class="chip" data-ex="'+i+'">'+e[0]+'</button>'}).join("");
-}
-function stepDone(i){var st=DATA[S.t].steps[i],c=S.c[S.t];var n=st.todo.filter(function(_,j){return c[i+"-"+j]}).length;return [n,st.todo.length]}
-function renderSteps(){var d=DATA[S.t];
- $("steps").innerHTML=d.steps.map(function(st,i){var dn=stepDone(i),ok=dn[0]===dn[1];
-  return '<article class="step'+(S.open[S.t]===i?" open cur":"")+(ok?" ok":"")+'" id="s'+i+'">'+
-  '<div class="shead" data-open="'+i+'" role="button" tabindex="0" aria-expanded="'+(S.open[S.t]===i)+'"><div class="num">'+(i+1)+'</div><div><h3>'+st.t+'</h3><div class="goal">'+st.goal+'</div></div>'+
-  '<div class="time">'+st.m[0]+'–'+st.m[1]+'분<span class="st">'+(ok?"완료":dn[0]?dn[0]+"/"+dn[1]:"")+'</span></div></div>'+
-  '<div class="sbody"><p class="why">'+st.why+'</p>'+
-  (st.prompt?'<div class="prompt"><div class="ptop"><span class="eyebrow">ChatGPT에게 보낼 말</span><button class="copy" data-copy="'+i+'">복사</button></div><pre>'+fill(esc(st.prompt),true)+'</pre></div>':'')+
-  '<ul class="todo">'+st.todo.map(function(t,j){return '<li><label><input type="checkbox" id="c-'+S.t+'-'+i+'-'+j+'" data-c="'+i+'-'+j+'"'+(S.c[S.t][i+"-"+j]?" checked":"")+'><span>'+esc(t)+'</span></label></li>'}).join("")+'</ul>'+
-  '<div class="tip">'+st.tip+'</div></div></article>'}).join("");
- renderBar();
-}
-function renderBar(){var d=DATA[S.t],all=0,done=0;
- $("bar").innerHTML=d.steps.map(function(st,i){var dn=stepDone(i);all+=dn[1];done+=dn[0];var w=st.m[1]-st.m[0];var cls=dn[0]===dn[1]?"done":dn[0]?"part":"";
-  return '<button class="seg '+cls+'" style="flex:'+w+';--p:'+(dn[0]/dn[1])+'" data-go="'+i+'" aria-label="'+(i+1)+'단계 '+st.t+'"><i></i><span>'+(i+1)+' '+st.t.split(" ")[0]+'</span></button>'}).join("");
- $("pct").textContent=done;$("tot").textContent=all;
-}
-function renderAll(){document.body.className=S.t;$("ttl").textContent=DATA[S.t].name;
- ["game","web"].forEach(function(t){$("tk-"+t).setAttribute("aria-pressed",S.t===t)});
- renderFields();renderSteps();
- $("sos").innerHTML=SOS.map(function(s,i){return '<details><summary>'+s[0]+'</summary><p>'+s[1]+'</p><div class="prompt"><div class="ptop"><span class="eyebrow">ChatGPT에게 보낼 말</span><button class="copy" data-sos="'+i+'">복사</button></div><pre>'+esc(s[2])+'</pre></div></details>'}).join("");
-}
-function openStep(i,scroll){S.open[S.t]=i;save();renderSteps();if(scroll){var el=$("s"+i);if(el)el.scrollIntoView({behavior:"smooth",block:"start"})}}
-function copyText(btn,txt){function ok(){btn.textContent="복사됨";btn.classList.add("did");setTimeout(function(){btn.textContent="복사";btn.classList.remove("did")},1500)}
- function fb(){var pre=btn.closest(".prompt").querySelector("pre");var r=document.createRange();r.selectNodeContents(pre);var sel=getSelection();sel.removeAllRanges();sel.addRange(r);btn.textContent="선택됨 · 길게 눌러 복사"}
- try{navigator.clipboard.writeText(txt).then(ok,fb)}catch(e){fb()}}
-document.addEventListener("click",function(e){var t=e.target.closest("[data-t],[data-ex],[data-open],[data-go],[data-copy],[data-sos],#reset");if(!t)return;
- if(t.dataset.t){S.t=t.dataset.t;save();renderAll()}
- else if(t.dataset.ex!=null){var ex=DATA[S.t].examples[+t.dataset.ex][1];DATA[S.t].fields.forEach(function(x,i){S.f[S.t][x[0]]=ex[i]});save();renderFields();renderSteps()}
- else if(t.dataset.open!=null){var i=+t.dataset.open;openStep(S.open[S.t]===i?-1:i,false)}
- else if(t.dataset.go!=null){openStep(+t.dataset.go,true)}
- else if(t.dataset.copy!=null){copyText(t,fill(DATA[S.t].steps[+t.dataset.copy].prompt,false))}
- else if(t.dataset.sos!=null){copyText(t,SOS[+t.dataset.sos][2])}
- else if(t.id==="reset"){if(!t.classList.contains("arm")){t.classList.add("arm");t.textContent="한 번 더 누르면 체크가 지워져요";setTimeout(function(){t.classList.remove("arm");t.textContent="처음부터 다시"},3000)}
-  else{S.c[S.t]={};S.open[S.t]=0;save();t.classList.remove("arm");t.textContent="처음부터 다시";renderSteps()}}
-});
-document.addEventListener("keydown",function(e){var t=e.target.closest("[data-open]");if(t&&(e.key==="Enter"||e.key===" ")){e.preventDefault();t.click()}});
-document.addEventListener("input",function(e){var k=e.target.dataset.k;if(!k)return;S.f[S.t][k]=e.target.value;save();
- document.querySelectorAll(".step").forEach(function(el,i){var st=DATA[S.t].steps[i];var pre=el.querySelector("pre");if(st.prompt&&pre)pre.innerHTML=fill(esc(st.prompt),true)})});
-document.addEventListener("change",function(e){var c=e.target.dataset.c;if(!c)return;S.c[S.t][c]=e.target.checked;
- var i=+c.split("-")[0],dn=stepDone(i);save();
- if(dn[0]===dn[1]&&i<DATA[S.t].steps.length-1){openStep(i+1,true)}else{var el=$("s"+i);el.classList.toggle("ok",dn[0]===dn[1]);el.querySelector(".st").textContent=dn[0]===dn[1]?"완료":dn[0]?dn[0]+"/"+dn[1]:"";renderBar()}});
-renderAll();
 
-/* ── 수업 페이지 로그인 연동: 진행 상황을 학생별로 구글 시트에 저장 ── */
+/* ───── 상태 ───── */
+var KEY="vibeGuide2";
+function blank(){return {v:2,t:"game",name:"",line:"",mood:"",colors:"",glink:"",wlink:"",c:{game:{},web:{}},at:{game:0,web:0}}}
+var S=blank(),view="home";
+function norm(d){var b=blank();if(!d||d.v!==2)return b;for(var k in b)if(d[k]!=null)b[k]=d[k];b.c.game=b.c.game||{};b.c.web=b.c.web||{};return b}
+try{S=norm(JSON.parse(localStorage.getItem(KEY)||"null"))}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}if(window.vibeSync)vibeSync()}
+function $(id){return document.getElementById(id)}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function isLink(v){return /^https?:\/\/\S+\.\S+/i.test(String(v||"").trim())}
+var PH={name:"게임 이름",line:"한 줄 소개",mood:"분위기",colors:"색"};
+function fill(txt,mark){return txt.replace(/\{(\w+)\}/g,function(_,k){var v=String(S[k]||"").trim();var out=v||("["+PH[k]+"]");return mark?'<mark>'+esc(out)+'</mark>':out})}
+function checks(t,i){var out=[];DATA[t].steps[i].b.forEach(function(b){
+  if(b.k==="prompt")out.push({id:b.id,opt:!!b.opt});
+  if(b.k==="todo")b.items.forEach(function(x){out.push({id:x.id,auto:x.auto})})});return out}
+function isOn(t,c){return c.auto?!!c.auto():!!S.c[t][c.id]}
+function stepState(t,i){var cs=checks(t,i).filter(function(c){return !c.opt});var n=cs.filter(function(c){return isOn(t,c)}).length;return {n:n,all:cs.length,done:n===cs.length}}
+function trackDone(t){var k=0;DATA[t].steps.forEach(function(_,i){if(stepState(t,i).done)k++});return k}
+
+/* ───── 화면 ───── */
+function go(v,dir){view=v;render(dir);window.scrollTo(0,0)}
+function render(dir){
+  document.body.className=S.t;
+  var el=$("view");el.hidden=false;
+  el.className="screen"+(dir<0?" back":"");void el.offsetWidth;
+  if(view==="home")el.innerHTML=homeHTML();
+  else if(view==="done")el.innerHTML=doneHTML();
+  else el.innerHTML=stepHTML();
+  el.style.display="flex";el.style.flexDirection="column";el.style.gap="18px";
+  if(view==="home")startDemo();
+  if(window.vibeChip)vibeChip();
+}
+function whoHTML(){return '<div class="who" id="who"></div>'}
+function homeHTML(){
+  function card(t){var d=DATA[t],k=trackDone(t),started=k||Object.keys(S.c[t]).length;
+    return '<button class="trk '+t+'" data-track="'+t+'"><span class="no">'+d.no+'</span><h2>'+d.name+'</h2><p>'+d.desc+'</p>'+
+    '<div class="mini">'+d.steps.map(function(_,i){return '<i class="'+(stepState(t,i).done?"on":"")+'"></i>'}).join("")+'</div>'+
+    '<span class="go">'+(k===d.steps.length?"다시 보기 →":started?(S.at[t]+1)+"단계부터 이어서 →":"시작하기 →")+'</span></button>'}
+  return whoHTML()+
+  '<div class="hero"><div><div class="eyebrow">방과후 · 바이브코딩 실습 · 회차별 60분</div><h1>과일 받기 게임 만들기</h1>'+
+  '<p>ChatGPT에게 말로 시키고, 실행해 보고, 고쳐 달라고 하는 걸 반복해요. 1회차에 게임을 만들고, 2회차에 그 게임을 소개하는 웹페이지를 만들어요.</p></div>'+
+  '<canvas class="demo" id="demo" width="360" height="300" aria-label="과일 받기 게임 예시 화면"></canvas></div>'+
+  '<div class="tracks">'+card("game")+card("web")+'</div>'+
+  '<div class="foot"><span id="footNote"></span><button class="ghost" id="reset">처음부터 다시</button></div>';
+}
+function stepHTML(){
+  var t=S.t,d=DATA[t],i=S.at[t],st=d.steps[i],ss=stepState(t,i),last=i===d.steps.length-1;
+  var segs=d.steps.map(function(x,j){var s=stepState(t,j);var can=j<=i||s.done||(j>0&&stepState(t,j-1).done);
+    return '<button class="seg'+(s.done?" done":"")+(j===i?" cur":"")+(can?" can":"")+'" style="flex:'+(x.m[1]-x.m[0])+'" '+(can?'data-step="'+j+'"':'tabindex="-1" aria-disabled="true"')+' aria-label="'+(j+1)+'단계 '+x.t+'"><span>'+(j+1)+'</span></button>'}).join("");
+  return '<div class="bar"><div class="brow"><button class="ghost" data-home>← 처음</button>'+
+   '<span class="where">'+d.no+' '+d.name+' · <b>'+(i+1)+' / '+d.steps.length+'</b></span>'+
+   '<button class="sosbtn" data-sos>막혔어요</button></div>'+
+   '<div class="segs">'+segs+'</div><div class="ticks"><span>0분</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>60분</span></div></div>'+
+  '<article class="card"><div class="shead"><div class="num">'+(i+1)+'</div><div><h2>'+st.t+'</h2><div class="goal">'+st.goal+'</div></div><div class="time">'+st.m[0]+'–'+st.m[1]+'분</div></div>'+
+   st.b.map(block).join("")+'</article>'+
+  '<div class="nav"><div class="left" id="left"'+(ss.done?' hidden':'')+'>'+leftText(ss)+'</div>'+(i>0?'<button class="btn line" data-prev>이전</button>':'')+
+   '<button class="btn" id="next" data-next'+(ss.done?'':' disabled')+'>'+(last?"완료":"다음 단계")+'</button></div>'+whoHTML();
+}
+function leftText(ss){return ss.done?"":"체크 "+(ss.all-ss.n)+"개를 마치면 다음으로 넘어갈 수 있어요."}
+function promptBox(id,label,v,opt,note){var t=S.t;
+  return '<div class="prompt'+(opt?" opt":"")+'"><div class="ptop"><span class="pl">'+esc(label)+(note?'<small>'+esc(note)+'</small>':'')+(opt?'<small>선택</small>':'')+'</span><button class="copy" data-copy="'+esc(v)+'">복사</button></div>'+
+   '<pre data-tpl="'+esc(v)+'">'+fill(esc(v),true)+'</pre>'+
+   (id?'<label class="pchk"><input type="checkbox" id="c-'+t+'-'+id+'" data-c="'+id+'"'+(S.c[t][id]?" checked":"")+'><span>보냈고 결과를 확인했어요</span></label>':'')+'</div>'}
+function block(b){var t=S.t;
+  if(b.k==="text")return '<p class="txt">'+esc(b.v)+'</p>';
+  if(b.k==="tip")return '<div class="tip">'+b.v+'</div>';
+  if(b.k==="field")return '<label class="f" for="f-'+t+'-'+b.f+'">'+esc(b.label)+'<input id="f-'+t+'-'+b.f+'" data-f="'+b.f+'" value="'+esc(S[b.f])+'" placeholder="'+esc(b.ph)+'" autocomplete="off"></label>';
+  if(b.k==="chips")return '<div><div class="lbl">'+esc(b.label)+'</div><div class="chips">'+b.opts.map(function(o){return '<button class="chip" data-chip="'+b.f+'" data-v="'+esc(o)+'" aria-pressed="'+(S[b.f]===o)+'">'+esc(o)+'</button>'}).join("")+'</div></div>';
+  if(b.k==="prompt")return promptBox(b.id,b.label,b.v,b.opt,b.note);
+  if(b.k==="todo")return '<ul class="todo">'+b.items.map(function(x){var on=isOn(t,{id:x.id,auto:x.auto});
+    return '<li><label><input type="checkbox" id="c-'+t+'-'+x.id+'" data-c="'+x.id+'"'+(on?" checked":"")+(x.auto?' disabled data-auto="1"':'')+'><span>'+esc(x.t)+(x.auto?'<em class="auto">칸을 채우면 자동 체크</em>':'')+'</span></label></li>'}).join("")+'</ul>';
+  if(b.k==="fixes")return '<div class="fixes">'+b.items.map(function(x){return '<details><summary>'+esc(x[0])+'</summary>'+promptBox(null,"ChatGPT에게 보낼 말",x[1])+'</details>'}).join("")+'</div>';
+  if(b.k==="gamelink")return isLink(S.glink)?'<div class="prev"><span>지난 시간에 저장한 내 게임</span><a href="'+esc(S.glink.trim())+'" target="_blank" rel="noopener">열기 →</a></div>':
+    '<div class="prev"><span>지난 시간 게임 링크가 저장돼 있지 않아요. ChatGPT 왼쪽 목록에서 지난 대화를 찾아 여세요.</span></div>';
+  return "";
+}
+function doneHTML(){var t=S.t,d=DATA[t],link=t==="game"?S.glink:S.wlink;
+  return '<div class="panel done"><div class="eyebrow">'+d.no+' 완료</div><h2>'+(t==="game"?esc(S.name||"과일 받기")+" 완성":"게임 소개 페이지 완성")+'</h2>'+
+  '<p class="txt">'+(t==="game"?"수고했어요. 다음 시간에는 이 게임을 소개하는 웹페이지를 만들어요. ChatGPT 대화를 지우지 마세요.":"수고했어요. 게임과 소개 페이지 링크는 선생님 쪽에도 저장됐어요.")+'</p>'+
+  (isLink(link)?'<div class="prev"><span>내 결과물</span><a href="'+esc(link.trim())+'" target="_blank" rel="noopener">열기 →</a></div>':'')+
+  '<div class="gbtns"><button class="btn" data-home>처음 화면으로</button><button class="ghost" data-back>마지막 단계 다시 보기</button></div></div>'+whoHTML();
+}
+function refreshChecks(){ // 칸 입력 뒤: 요청문·자동 체크·다음 버튼만 갱신 (입력 중인 칸은 그대로)
+  document.querySelectorAll("pre[data-tpl]").forEach(function(p){p.innerHTML=fill(esc(p.getAttribute("data-tpl")),true)});
+  var t=S.t,i=S.at[t];DATA[t].steps[i].b.forEach(function(b){if(b.k==="todo")b.items.forEach(function(x){if(x.auto){var c=$("c-"+t+"-"+x.id);if(c)c.checked=!!x.auto()}})});
+  var ss=stepState(t,i),n=$("next");if(n)n.disabled=!ss.done;var l=$("left");if(l){l.textContent=leftText(ss);l.hidden=ss.done}
+  document.querySelectorAll(".seg").forEach(function(sg,j){sg.classList.toggle("done",stepState(t,j).done)});
+}
+function copyText(btn,txt){function ok(){btn.textContent="복사됨";btn.classList.add("did");setTimeout(function(){btn.textContent="복사";btn.classList.remove("did")},1500)}
+  function fb(){var pre=btn.closest(".prompt").querySelector("pre");var r=document.createRange();r.selectNodeContents(pre);var sel=getSelection();sel.removeAllRanges();sel.addRange(r);btn.textContent="선택됨 · Ctrl+C"}
+  try{navigator.clipboard.writeText(txt).then(ok,fb)}catch(e){fb()}}
+
+document.addEventListener("click",function(e){
+  var x=e.target.closest("[data-track],[data-step],[data-next],[data-prev],[data-home],[data-back],[data-sos],[data-copy],[data-chip],#reset,#sosX,#sheet");if(!x)return;
+  if(x.id==="sheet"){if(e.target===x)x.hidden=true;return}
+  if(x.id==="sosX"){$("sheet").hidden=true;return}
+  if(x.dataset.copy!=null){copyText(x,fill(x.dataset.copy,false));return}
+  if(x.dataset.sos!=null){$("sheet").hidden=false;$("sosX").focus();return}
+  if(x.dataset.chip){S[x.dataset.chip]=x.dataset.v;save();document.querySelectorAll('[data-chip="'+x.dataset.chip+'"]').forEach(function(c){c.setAttribute("aria-pressed",c.dataset.v===S[x.dataset.chip])});refreshChecks();return}
+  if(x.dataset.track){S.t=x.dataset.track;var k=trackDone(S.t);if(k===DATA[S.t].steps.length)S.at[S.t]=0;save();go("step",1);return}
+  if(x.dataset.step!=null){var j=+x.dataset.step,old=S.at[S.t];S.at[S.t]=j;save();go("step",j<old?-1:1);return}
+  if(x.dataset.next!=null){var t=S.t;if(!stepState(t,S.at[t]).done)return;if(S.at[t]<DATA[t].steps.length-1){S.at[t]++;save();go("step",1)}else{save();go("done",1)}return}
+  if(x.dataset.prev!=null){S.at[S.t]=Math.max(0,S.at[S.t]-1);save();go("step",-1);return}
+  if(x.dataset.back!=null){go("step",-1);return}
+  if(x.dataset.home!=null){go("home",-1);return}
+  if(x.id==="reset"){if(!x.classList.contains("arm")){x.classList.add("arm");x.textContent="한 번 더 누르면 체크가 모두 지워져요";setTimeout(function(){x.classList.remove("arm");x.textContent="처음부터 다시"},3000)}
+    else{var keep=S.t;S=blank();S.t=keep;save();go("home",-1)}}
+});
+document.addEventListener("keydown",function(e){if(e.key==="Escape")$("sheet").hidden=true});
+document.addEventListener("input",function(e){var f=e.target.dataset.f;if(!f)return;S[f]=e.target.value;save();refreshChecks()});
+document.addEventListener("change",function(e){var c=e.target.dataset.c;if(!c||e.target.dataset.auto)return;S.c[S.t][c]=e.target.checked;save();refreshChecks()});
+$("sosList").innerHTML=SOS.map(function(s){return '<details><summary>'+esc(s[0])+'</summary>'+promptBox(null,"ChatGPT에게 보낼 말",s[1])+'</details>'}).join("");
+
+/* 처음 화면의 작은 게임 예시 */
+var demoRaf=0;
+function startDemo(){cancelAnimationFrame(demoRaf);var cv=$("demo");if(!cv)return;var x=cv.getContext("2d"),W=cv.width,H=cv.height;
+  var cs=getComputedStyle(document.body),acc=cs.getPropertyValue("--game").trim(),ink=cs.getPropertyValue("--ink").trim(),line=cs.getPropertyValue("--line").trim();
+  var cols=["#E8483C","#F2B233","#6BBF59","#8E5AC8"],fr=[],bx=W/2,t0=0,score=0;
+  function add(){fr.push({x:30+Math.random()*(W-60),y:-14,v:1.4+Math.random()*1.1,c:cols[(Math.random()*4)|0]})}
+  function draw(){x.clearRect(0,0,W,H);x.fillStyle=line;x.fillRect(0,H-22,W,2);
+    fr.forEach(function(f){x.fillStyle=f.c;x.beginPath();x.arc(f.x,f.y,11,0,7);x.fill();x.fillStyle="#4E8A3A";x.fillRect(f.x-1,f.y-16,2,6)});
+    x.fillStyle=acc;x.beginPath();x.moveTo(bx-34,H-52);x.lineTo(bx+34,H-52);x.lineTo(bx+26,H-26);x.lineTo(bx-26,H-26);x.closePath();x.fill();
+    x.fillStyle=ink;x.font="600 20px JetBrains Mono, monospace";x.fillText("점수 "+score,14,30)}
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches){fr=[{x:W*.3,y:70,c:cols[0]},{x:W*.62,y:150,c:cols[2]}];draw();return}
+  function tick(ts){if(!$("demo"))return;if(ts-t0>900){t0=ts;add()}
+    var tgt=fr.length?fr.reduce(function(a,b){return b.y>a.y?b:a}).x:W/2;bx+=(tgt-bx)*0.06;
+    fr.forEach(function(f){f.y+=f.v});fr=fr.filter(function(f){if(f.y>H-58&&f.y<H-40&&Math.abs(f.x-bx)<36){score++;return false}return f.y<H+20});
+    draw();demoRaf=requestAnimationFrame(tick)}
+  demoRaf=requestAnimationFrame(tick)}
+
+/* ───── 수업 페이지 로그인 연동: 진행 상황을 학생별로 구글 시트에 저장 ───── */
 (function(){
  var API='https://script.google.com/macros/s/AKfycbyw6oiaICnnbyw2l0xVsVCJ0VBI1lz4mQM3N9BpNOs7p0edgAV9dcWNKQxMNTMhIdVykw/exec';
- var TK='vibe_token',GK='vibe_guest',tok=null,me=null,mode='',timer=null,saving=false,again=false;
+ var TK='vibe_token',GK='vibe_guest',tok=null,me=null,mode='',timer=null,saving=false,again=false,state='';
  function g(k){try{return localStorage.getItem(k)}catch(e){return null}}
  function p(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}}
  function call(fn){var args=[].slice.call(arguments,1);
@@ -367,57 +448,57 @@ renderAll();
    .then(function(r){return r.json()}).then(function(r){if(r.err!==undefined)throw new Error(r.err);return r.v})}
  function msg(t){$("gMsg").textContent=t||""}
  function busy(on){$("gGo").disabled=on;$("gGo").textContent=on?"확인 중…":(mode?"로그인":"다음")}
- function show(main){$("gate").hidden=main;$("main").hidden=!main}
- function chip(state){var w=$("who");
-  if(!me){w.hidden=false;w.innerHTML='<span>로그인 안 함 · 이 노트북에만 저장</span><button class="ghost" id="wLogin">로그인</button>';$("footNote").textContent="로그인하지 않아서 이 노트북에만 저장돼요.";return}
-  w.hidden=false;w.innerHTML='<b>'+esc(me.id)+' '+esc(me.name)+'</b><span class="sv'+(state==="bad"?" bad":"")+'" id="wState">'+esc(state||"")+'</span><button class="ghost" id="wOut">로그아웃</button>';
-  $("footNote").textContent="진행 상황은 내 계정에 저장돼서 다른 노트북에서도 이어져요."}
- function summary(){var parts=[],tr={game:"게임",web:"웹"};
-  ["game","web"].forEach(function(t){var st=DATA[t].steps,done=0,any=0;st.forEach(function(x,i){var n=x.todo.filter(function(_,j){return S.c[t][i+"-"+j]}).length;if(n)any=1;if(n===x.todo.length)done++});if(any||t===S.t)parts.push(tr[t]+" "+done+"/"+st.length+"단계")});
-  return {track:tr[S.t],progress:parts.join(" · ")}}
- function push(){if(!tok)return;if(saving){again=true;return}saving=true;chip("저장 중…");
+ function showGate(){$("gate").hidden=false;$("view").hidden=true;$("view").style.display="none"}
+ function showApp(){$("gate").hidden=true;var h=(location.hash||"").slice(1);if(h==="game"||h==="web"){S.t=h;view="step"}else view="home";render(1)}
+ window.vibeChip=function(){var w=$("who");if(!w)return;var f=$("footNote");
+  if(!me){w.innerHTML='<span>로그인 안 함 · 이 노트북에만 저장</span><button class="ghost" id="wLogin">로그인</button>';if(f)f.textContent="로그인하지 않아서 이 노트북에만 저장돼요.";return}
+  w.innerHTML='<b>'+esc(me.id)+' '+esc(me.name)+'</b><span class="sv'+(/실패|끊김/.test(state)?" bad":"")+'">'+esc(state)+'</span><button class="ghost" id="wOut">로그아웃</button>';
+  if(f)f.textContent="진행 상황은 내 계정에 저장돼서 다른 노트북에서도 이어져요."};
+ function setState(s){state=s;vibeChip()}
+ function summary(){var tr={game:"게임",web:"웹"},parts=[];
+  ["game","web"].forEach(function(t){var k=trackDone(t);if(k||Object.keys(S.c[t]).length||t===S.t)parts.push(tr[t]+" "+k+"/"+DATA[t].steps.length+"단계")});
+  return {track:tr[S.t],progress:parts.join(" · "),glink:S.glink,wlink:S.wlink}}
+ function push(){if(!tok)return;if(saving){again=true;return}saving=true;setState("저장 중…");
   call("apiVibeSave",tok,S,summary()).then(function(r){saving=false;
-    if(r&&r.ok){chip("저장됨 "+r.time)}else if(r&&r.expired){expire()}else{chip("저장 실패 · 다시 시도 중");setTimeout(push,4000)}
+    if(r&&r.ok)setState("저장됨 "+r.time);else if(r&&r.expired)expire();else{setState("저장 실패 · 다시 시도 중");setTimeout(push,4000)}
     if(again){again=false;push()}})
-  .catch(function(){saving=false;chip("bad");$("wState").textContent="연결 끊김 · 다시 시도 중";setTimeout(push,5000)})}
- window.vibeSync=function(){if(!tok)return;clearTimeout(timer);chip("저장 대기…");timer=setTimeout(push,1200)};
- function apply(data){if(data&&data.f&&data.c){S=Object.assign({t:"game",f:{game:{},web:{}},c:{game:{},web:{}},open:{game:0,web:0}},data);try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}renderAll()}}
- function enter(token,who,data,fresh){tok=token;me=who;p(TK,token);p(GK,null);
-  if(data)apply(data);else{S={t:S.t,f:{game:{},web:{}},c:{game:{},web:{}},open:{game:0,web:0}};renderAll();push()}
-  show(true);chip(data?"불러옴":"새로 시작")}
- function expire(){tok=null;p(TK,null);var keep=me;me=null;mode="";reset1();if(keep){$("gId").value=keep.id;$("gName").value=keep.name}
-  show(false);$("who").hidden=true;msg("로그인 시간이 지났어요. 다시 로그인하면 이어서 저장돼요.")}
+  .catch(function(){saving=false;setState("연결 끊김 · 다시 시도 중");setTimeout(push,5000)})}
+ window.vibeSync=function(){if(!tok)return;clearTimeout(timer);state="저장 대기…";timer=setTimeout(push,1200)};
+ function enter(token,who,data){tok=token;me=who;p(TK,token);p(GK,null);
+  if(data&&data.v===2){S=norm(data);try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}state="불러옴"}
+  else{S=blank();state="새로 시작";push()}
+  showApp()}
+ function expire(){tok=null;p(TK,null);var keep=me;me=null;reset1();if(keep){$("gId").value=keep.id;$("gName").value=keep.name}
+  showGate();msg("로그인 시간이 지났어요. 다시 로그인하면 이어서 저장돼요.")}
  function reset1(){mode="";$("gStepPin").hidden=true;$("gStepSetup").hidden=true;$("gBack").hidden=true;$("gId").disabled=false;$("gName").disabled=false;busy(false)}
  function step1(){var id=$("gId").value.replace(/\D/g,""),name=$("gName").value.replace(/\s+/g,"");
   if(id.length!==5||!name){msg("학번 5자리와 이름을 입력해 주세요.");return}
-  busy(true);msg("");call("apiCheckStudent",id,name).then(function(r){busy(false);
-   if(!r.ok){msg(r.error);return}
-   mode=r.mode;me={id:id,name:r.name||name};$("gId").disabled=true;$("gName").disabled=true;$("gBack").hidden=false;
+  busy(true);msg("");call("apiCheckStudent",id,name).then(function(r){
+   if(!r.ok){busy(false);msg(r.error);return}
+   mode=r.mode;me={id:id,name:r.name||name};$("gId").disabled=true;$("gName").disabled=true;$("gBack").hidden=false;busy(false);
    if(mode==="login"){$("gStepPin").hidden=false;$("gPin").value="";$("gPin").focus()}else{$("gStepSetup").hidden=false;$("gCode").focus();msg("처음이라 PIN을 만들어야 해요. 수업 페이지에서도 이 PIN을 써요.")}
-   busy(false)}).catch(function(e){busy(false);msg("연결이 안 돼요. 인터넷을 확인하고 다시 눌러 주세요.")})}
+  }).catch(function(){busy(false);msg("연결이 안 돼요. 인터넷을 확인하고 다시 눌러 주세요.")})}
  function step2(){var who=me,pr;
   if(mode==="login"){var pin=$("gPin").value.trim();if(!/^\d{4}$/.test(pin)){msg("PIN 숫자 4자리를 입력해 주세요.");return}pr=call("apiLogin",who.id,who.name,pin)}
   else{var code=$("gCode").value.replace(/\D/g,""),np=$("gNew").value.trim();if(code.length!==4||!/^\d{4}$/.test(np)){msg("휴대폰 번호 뒤 4자리와 새 PIN 4자리를 입력해 주세요.");return}pr=call("apiSetupPin",who.id,who.name,code,np)}
   busy(true);msg("");
   pr.then(function(r){if(!r.ok){busy(false);msg(r.error);return}var t=r.token;
-    return call("apiVibeLoad",t).then(function(v){busy(false);if(!v.ok){msg(v.error);return}enter(t,{id:v.id,name:v.name},v.data)})})
+    return call("apiVibeLoad",t).then(function(v){busy(false);if(!v.ok){msg(v.error);return}me=null;enter(t,{id:v.id,name:v.name},v.data)})})
   .catch(function(){busy(false);msg("연결이 안 돼요. 인터넷을 확인하고 다시 눌러 주세요.")})}
  $("gGo").addEventListener("click",function(){mode?step2():step1()});
  ["gId","gName","gPin","gCode","gNew"].forEach(function(id){$(id).addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();$("gGo").click()}})});
  $("gBack").addEventListener("click",function(){me=null;reset1();msg("");$("gId").focus()});
- $("gGuest").addEventListener("click",function(){p(GK,"1");tok=null;me=null;show(true);chip()});
+ $("gGuest").addEventListener("click",function(){p(GK,"1");tok=null;me=null;showApp()});
  document.addEventListener("click",function(e){
   if(e.target.id==="wOut"){if(tok)call("apiLogout",tok).catch(function(){});tok=null;me=null;p(TK,null);
-   S={t:"game",f:{game:{},web:{}},c:{game:{},web:{}},open:{game:0,web:0}};try{localStorage.removeItem(KEY)}catch(x){}renderAll();reset1();$("gId").value="";$("gName").value="";msg("로그아웃했어요.");show(false);$("who").hidden=true}
-  if(e.target.id==="wLogin"){p(GK,null);reset1();msg("");show(false);$("who").hidden=true}});
- /* 시작: 저장된 로그인 → 불러오기, 아니면 로그인 화면 */
+   S=blank();try{localStorage.removeItem(KEY)}catch(x){}reset1();$("gId").value="";$("gName").value="";msg("로그아웃했어요.");showGate()}
+  if(e.target.id==="wLogin"){p(GK,null);reset1();msg("");showGate()}});
  try{var w=JSON.parse(g("cls_who")||"null");if(w&&w.id){$("gId").value=w.id;$("gName").value=w.name||""}}catch(e){}
  var t0=g(TK);
- if(t0){show(false);msg("불러오는 중…");call("apiVibeLoad",t0).then(function(v){msg("");if(v&&v.ok)enter(t0,{id:v.id,name:v.name},v.data);else{p(TK,null)}}).catch(function(){msg("연결이 안 돼요. 새로고침해 주세요.")})}
- else if(g(GK)){show(true);chip()}
- else show(false);
+ if(t0){showGate();msg("불러오는 중…");call("apiVibeLoad",t0).then(function(v){msg("");if(v&&v.ok)enter(t0,{id:v.id,name:v.name},v.data);else p(TK,null)}).catch(function(){msg("연결이 안 돼요. 새로고침해 주세요.")})}
+ else if(g(GK))showApp();
+ else showGate();
 })();
 </script>
-
 </body>
 </html>
