@@ -1,6 +1,6 @@
 {
-  "version": "20261106.1056",
-  "note": "레퍼런스 다른 수업에 복사",
+  "version": "20261106.1124",
+  "note": "체크 과제 현황에서 이름 누르면 학생 상세",
   "files": [
     {
       "name": "Code.gs",
@@ -12,7 +12,7 @@
     },
     {
       "name": "Index.html",
-      "sha256": "437754f2a3291695930c9ca400f543d82cdf810f98cd163f3f4e7dbc842dfb2b"
+      "sha256": "4d53b96a793d7ede0ee7d6f9978640372a7c222f44e970de25bda7b2e4befbdc"
     },
     {
       "name": "Setup.html",

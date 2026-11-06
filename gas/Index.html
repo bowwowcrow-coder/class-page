@@ -330,6 +330,8 @@
   .summary strong { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
   .summary span { color: var(--sub); font-size: 15px; }
   .summary button { border: 0; background: none; padding: 4px 0; color: var(--accent-ink, var(--accent)); font-size: 14px; cursor: pointer; }
+  .who-btn { border: 0; background: none; padding: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+  .who-btn:hover { color: var(--accent); }
   .sum-acts { display: flex; gap: 16px; flex-wrap: wrap; justify-content: flex-end; }
   .copy-head { display: flex; justify-content: space-between; align-items: baseline; margin: 4px 0 6px; }
   .copy-head .link { width: auto; margin: 0; padding: 4px 0; }
@@ -4345,7 +4347,7 @@
     box.appendChild(summary);
     var paintCount = function () { strong.textContent = '모두 낸 학생 ' + roster.filter(full).length + '명'; };
     paintCount();
-    box.appendChild(el('p', 'hint', '항목을 누르면 바로 저장됩니다. 다시 누르면 취소돼요. (' + items.join(' · ') + ')'));
+    box.appendChild(el('p', 'hint', '항목을 누르면 바로 저장됩니다. 다시 누르면 취소돼요. 이름을 누르면 학생 정보·PIN 초기화. (' + items.join(' · ') + ')'));
     // 항목별로 한 번에: 낸 사람 수
     var per = el('p', 'hint');
     box.appendChild(per);
@@ -4362,7 +4364,8 @@
       var list = el('div', 'list');
       groups[key].forEach(function (s) {
         var row = el('div', 'ck-row');
-        var who = el('span', 'nzw'); who.appendChild(el('i', '', s.num)); who.appendChild(document.createTextNode(s.name));
+        var who = button('nzw who-btn', null, function () { openDetail(s); }); // 이름을 누르면 학생 상세(메모·PIN 초기화)
+        who.appendChild(el('i', '', s.num)); who.appendChild(document.createTextNode(s.name));
         if (s.note) who.appendChild(el('small', '', s.note));
         row.appendChild(who);
         var cnt = el('span', 'cnt');
