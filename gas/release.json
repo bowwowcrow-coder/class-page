@@ -1,10 +1,10 @@
 {
-  "version": "20261101.1952",
-  "note": "바이브코딩 가이드: 회차당 보내기 2번 구조",
+  "version": "20261106.1056",
+  "note": "레퍼런스 다른 수업에 복사",
   "files": [
     {
       "name": "Code.gs",
-      "sha256": "5a90f29f2a2d7143224630b0ba62527ca69aeee0b70e80e254e2e41d101f1d40"
+      "sha256": "3545384bb4372888ecb631e94955501f593679459de1da05398a3de482f187f3"
     },
     {
       "name": "Demo.gs",
@@ -12,7 +12,7 @@
     },
     {
       "name": "Index.html",
-      "sha256": "d467e2001500abfdc32848c071ae649536431751469965f4db5fcfbfc417e63a"
+      "sha256": "437754f2a3291695930c9ca400f543d82cdf810f98cd163f3f4e7dbc842dfb2b"
     },
     {
       "name": "Setup.html",

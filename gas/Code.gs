@@ -2715,6 +2715,40 @@ function apiTeacherSaveRef(token, courseId, d) {
   return teacherPosts_(courseId);
 }
 
+/** 자료를 다른 수업으로 복사. 같은 분류·제목·링크가 이미 있는 수업은 건너뛴다. */
+function apiTeacherCopyRefs(token, fromCourse, keys, toIds, published) {
+  if (!isTeacher_(token)) return expired_();
+  fromCourse = String(fromCourse);
+  keys = (Array.isArray(keys) ? keys : []).map(String);
+  const valid = activeCourses_().map(function (c) { return c.id; });
+  toIds = (Array.isArray(toIds) ? toIds : []).map(String).filter(function (id) { return id !== fromCourse && valid.indexOf(id) >= 0; });
+  if (!keys.length) return fail_('복사할 자료를 골라 주세요.');
+  if (!toIds.length) return fail_('복사할 수업을 골라 주세요.');
+  const sh = sheet_(SHEET.REFS);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  let copied = 0, skipped = 0;
+  try {
+    const all = read_(sh, REF_HEADERS.length);
+    const src = all.filter(function (r) { return String(r[2]).trim() && String(r[0]).trim() === fromCourse && keys.indexOf(refKey_(r)) >= 0; });
+    if (!src.length) return fail_(CHANGED_MSG);
+    toIds.forEach(function (to) {
+      const have = all.filter(function (r) { return String(r[2]).trim() && String(r[0]).trim() === to; }).map(refKey_);
+      src.forEach(function (r) {
+        if (have.indexOf(refKey_(r)) >= 0) { skipped++; return; }
+        const row = freeRow_(sh, 3);
+        sh.getRange(row, 1, 1, REF_HEADERS.length).setValues([[to, r[1], r[2], r[3], r[4], published !== false, r[6]]]);
+        have.push(refKey_(r));
+        copied++;
+      });
+    });
+  } finally {
+    lock.releaseLock();
+  }
+  log_('', '교사', '레퍼런스 복사', fromCourse + ' → ' + toIds.join(', ') + ' · ' + copied + '개');
+  return { ok: true, copied: copied, skipped: skipped };
+}
+
 function apiTeacherDeleteRef(token, courseId, row, key) {
   if (!isTeacher_(token)) return expired_();
   const sh = sheet_(SHEET.REFS);
