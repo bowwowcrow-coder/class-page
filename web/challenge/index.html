@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>AI 크리에이터 챌린지 작품 제출</title>
+<meta name="description" content="인천디자인고등학교 AI 크리에이터 챌린지 작품 제출 창구">
+<meta property="og:title" content="AI 크리에이터 챌린지 작품 제출">
+<meta property="og:description" content="숏폼·롱폼 작품과 AI 사용 증거를 여기서 제출하세요.">
+<meta property="og:image" content="https://total-page.pages.dev/og.png">
+<meta property="og:url" content="https://total-page.pages.dev/challenge/">
+<meta name="theme-color" content="#f5f5f7">
+<link rel="icon" type="image/png" href="/favicon-64.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #f5f5f7; --surface: #fff; --ink: #1d1d1f; --sub: #6e6e73; --line: rgba(0,0,0,.08); --fill: rgba(118,118,128,.12);
+    --accent: #0071e3; --accent-down: #0062c4; --danger: #d70015; --green: #248a3d; --seg: #fff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #000; --surface: #1c1c1e; --ink: #f5f5f7; --sub: #98989d; --line: rgba(255,255,255,.12); --fill: rgba(118,118,128,.24);
+      --accent: #0a84ff; --accent-down: #409cff; --danger: #ff453a; --green: #30d158; --seg: #636366; color-scheme: dark; }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Malgun Gothic", sans-serif; font-size: 16px; line-height: 1.5; letter-spacing: -0.01em; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 28px 16px 80px; }
+  header { margin-bottom: 22px; }
+  .eyebrow { color: var(--sub); font-size: 14px; font-weight: 600; }
+  h1 { margin: 2px 0 8px; font-size: 30px; line-height: 1.2; letter-spacing: -0.03em; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--fill); font-size: 13px; font-weight: 600; color: var(--sub); }
+  .pill.on { background: rgba(36,138,61,.12); color: var(--green); }
+  .pill.on::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+  .card { background: var(--surface); border-radius: 18px; padding: 20px; margin-bottom: 14px; }
+  .card h2 { margin: 0 0 14px; font-size: 19px; letter-spacing: -0.02em; }
+  .card h2 small { font-size: 13px; font-weight: 500; color: var(--sub); margin-left: 6px; }
+  label.f, .f { display: block; margin-bottom: 14px; }
+  .f > span { display: block; font-size: 13px; font-weight: 600; color: var(--sub); margin-bottom: 6px; }
+  .f > span b { color: var(--danger); font-weight: 600; }
+  input[type=text], input[type=tel], input[type=password], input[type=url], input[type=number], select, textarea {
+    width: 100%; min-height: 48px; padding: 12px 14px; border: 0; border-radius: 12px; background: var(--fill); color: var(--ink); font: inherit; font-size: 17px; outline: none; -webkit-appearance: none; appearance: none; }
+  textarea { min-height: 96px; resize: vertical; }
+  input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(0,113,227,.35); }
+  input[readonly] { color: var(--sub); }
+  .row { display: grid; gap: 8px; grid-template-columns: 1.6fr .8fr .8fr .8fr; }
+  .row .f { margin-bottom: 8px; }
+  .person { display: grid; gap: 8px; grid-template-columns: 1.4fr .7fr .7fr .7fr 1.2fr; align-items: end; }
+  .person .f { margin: 0; }
+  @media (max-width: 560px) { .person { grid-template-columns: 1fr 1fr 1fr; } .person .dept, .person .nm { grid-column: span 3; } }
+  .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; padding: 2px; border-radius: 12px; background: var(--fill); margin-bottom: 14px; }
+  .seg button { min-height: 44px; border: 0; border-radius: 10px; background: none; color: var(--ink); font: inherit; font-size: 15px; font-weight: 500; cursor: pointer; padding: 6px 8px; line-height: 1.25; }
+  .seg button small { display: block; font-size: 12px; color: var(--sub); font-weight: 400; }
+  .seg button[aria-pressed=true] { background: var(--seg); font-weight: 700; box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+  .btn { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 52px; border: 0; border-radius: 14px; background: var(--accent); color: #fff; font: inherit; font-size: 17px; font-weight: 600; cursor: pointer; text-decoration: none; }
+  .btn:active { background: var(--accent-down); }
+  .btn[disabled] { opacity: .45; cursor: default; }
+  .btn.quiet { background: var(--fill); color: var(--ink); }
+  .btn.sm { width: auto; min-height: 40px; padding: 0 16px; font-size: 15px; border-radius: 11px; }
+  .link { border: 0; background: none; padding: 6px 0; color: var(--accent); font: inherit; font-size: 15px; cursor: pointer; }
+  .link.danger { color: var(--danger); }
+  .msg { min-height: 22px; margin: 10px 0 0; color: var(--danger); font-size: 14px; white-space: pre-line; }
+  .hint { margin: 4px 0 0; color: var(--sub); font-size: 13px; }
+  .top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 12px; }
+  .top strong { font-size: 17px; }
+  .entry { display: block; width: 100%; text-align: left; border: 0; font: inherit; color: inherit; cursor: pointer; }
+  .entry .k { display: inline-block; padding: 2px 8px; border-radius: 6px; background: var(--fill); font-size: 12px; font-weight: 700; margin-right: 6px; vertical-align: 2px; }
+  .entry .t { font-size: 18px; font-weight: 700; }
+  .entry .d { margin-top: 6px; color: var(--sub); font-size: 14px; }
+  .entry .warn { color: var(--danger); }
+  .entry .okk { color: var(--green); }
+  .files { display: grid; gap: 8px; margin-bottom: 10px; }
+  .file { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--fill); font-size: 15px; }
+  .file .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file small { flex: none; color: var(--sub); }
+  .file.new { background: rgba(0,113,227,.10); }
+  .file.bad { background: rgba(215,0,21,.10); }
+  .file .link { flex: none; padding: 0 2px; }
+  .check { display: flex; gap: 10px; align-items: flex-start; padding: 12px 0; border-top: 1px solid var(--line); cursor: pointer; font-size: 15px; }
+  .check input { flex: none; width: 22px; height: 22px; margin: 1px 0 0; accent-color: var(--accent); }
+  .check small { display: block; color: var(--sub); font-size: 13px; margin-top: 2px; }
+  .member { padding: 12px; border-radius: 14px; border: 1px solid var(--line); margin-bottom: 10px; }
+  .member .mh { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 14px; font-weight: 600; color: var(--sub); }
+  .ov { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: grid; place-items: center; padding: 16px; z-index: 10; }
+  .ov .box { width: 100%; max-width: 440px; background: var(--surface); border-radius: 20px; padding: 22px; }
+  .ov h3 { margin: 0 0 6px; font-size: 19px; }
+  .bar { height: 8px; border-radius: 99px; background: var(--fill); overflow: hidden; margin: 6px 0 12px; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+  .up { font-size: 14px; }
+  .up .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .spin { width: 28px; height: 28px; margin: 40px auto; border: 3px solid var(--fill); border-top-color: var(--accent); border-radius: 50%; animation: sp 0.8s linear infinite; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+  [hidden] { display: none !important; }
+  .done { text-align: center; padding: 10px 0; }
+  .done .big { font-size: 44px; line-height: 1; margin-bottom: 8px; color: var(--green); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">인천디자인고등학교</div>
+    <h1>AI 크리에이터 챌린지<br>작품 제출</h1>
+    <span class="pill" id="status">불러오는 중</span>
+  </header>
+  <main id="app"><div class="spin"></div></main>
+</div>
+<script>
+(function () {
+  var API = 'https://script.google.com/macros/s/AKfycbyw6oiaICnnbyw2l0xVsVCJ0VBI1lz4mQM3N9BpNOs7p0edgAV9dcWNKQxMNTMhIdVykw/exec';
+  if (window.CH_API) API = window.CH_API; // 테스트용
+  var DEPTS = ['건축디자인과', '제품디자인과', '패션디자인과', '시각디자인과', '도자디자인과'];
+  var KINDS = { '숏폼': '1분 이내', '롱폼': '3분 이상 10분 미만' };
+  var EV_MAX = 5, MB = 1024 * 1024;
+  var app = document.getElementById('app');
+  var S = { token: null, phone: '', entries: [], info: null, mode: 'new' };
+  try { S.token = sessionStorage.getItem('ch_token'); } catch (e) {}
+
+  function call(fn) {
+    var args = [].slice.call(arguments, 1);
+    return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: fn, args: args }) })
+      .then(function (r) { return r.json(); })
+      .then(function (r) { if (r.err !== undefined) throw new Error(r.err); return r.v; })
+      .catch(function (e) { if (e instanceof TypeError) throw new Error('인터넷 연결을 확인하고 다시 해 주세요.'); throw e; });
+  }
+  function must(r) {
+    if (r && r.expired) { logout(); throw new Error('들어온 지 오래돼서 다시 들어와야 해요.'); }
+    if (!r || !r.ok) throw new Error((r && r.error) || '문제가 생겼어요.');
+    return r;
+  }
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function btn(cls, text, fn) { var b = el('button', cls, text); b.type = 'button'; if (fn) b.addEventListener('click', fn); return b; }
+  function field(label, input, req, hint) {
+    var f = el('label', 'f'); var s = el('span', '', label); if (req) { s.appendChild(document.createTextNode(' ')); s.appendChild(el('b', '', '*')); }
+    f.appendChild(s); f.appendChild(input); if (hint) f.appendChild(el('p', 'hint', hint)); return f;
+  }
+  function input(type, val, ph) { var i = el('input'); i.type = type; if (val != null) i.value = val; if (ph) i.placeholder = ph; return i; }
+  function size(b) { return b >= MB * 1024 ? (b / MB / 1024).toFixed(1) + 'GB' : b >= MB ? (b / MB).toFixed(1) + 'MB' : Math.max(1, Math.round(b / 1024)) + 'KB'; }
+  function mmss(s) { s = Math.round(s); return Math.floor(s / 60) + '분 ' + (s % 60) + '초'; }
+  function when(ms) { var d = new Date(ms); return (d.getMonth() + 1) + '월 ' + d.getDate() + '일 ' + ['일', '월', '화', '수', '목', '금', '토'][d.getDay()] + '요일 ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+  function setStatus(info) {
+    S.info = info;
+    var st = document.getElementById('status');
+    st.className = 'pill' + (info.open ? ' on' : '');
+    st.textContent = info.open ? ('접수 중' + (info.deadline ? ' · ' + when(info.deadline) + ' 마감' : '')) : (info.on ? '접수 마감' : '지금은 접수를 받지 않아요');
+  }
+  function logout() { S.token = null; try { sessionStorage.removeItem('ch_token'); } catch (e) {} drawEnter(); }
+  function phoneFmt(v) { var d = String(v).replace(/\D/g, '').slice(0, 11); return d.length < 4 ? d : d.length < 8 ? d.slice(0, 3) + '-' + d.slice(3) : d.slice(0, 3) + '-' + d.slice(3, d.length - 4) + '-' + d.slice(-4); }
+
+  /* ── 들어오기 ── */
+  function drawEnter() {
+    app.textContent = '';
+    var c = el('section', 'card');
+    c.appendChild(el('h2', '', '들어오기'));
+    var seg = el('div', 'seg');
+    var b1 = btn('', null, function () { S.mode = 'new'; paint(); }), b2 = btn('', null, function () { S.mode = 'back'; paint(); });
+    b1.innerHTML = '처음 제출해요<small>PIN을 새로 정해요</small>'; b2.innerHTML = '이어서 수정해요<small>정한 PIN으로 들어가요</small>';
+    seg.appendChild(b1); seg.appendChild(b2); c.appendChild(seg);
+    var phone = input('tel', '', '010-0000-0000'); phone.autocomplete = 'tel'; phone.inputMode = 'numeric';
+    phone.addEventListener('input', function () { phone.value = phoneFmt(phone.value); });
+    var pin = input('password', '', '숫자 4자리'); pin.inputMode = 'numeric'; pin.maxLength = 4; pin.autocomplete = 'off';
+    var pin2 = input('password', '', '한 번 더'); pin2.inputMode = 'numeric'; pin2.maxLength = 4; pin2.autocomplete = 'off';
+    c.appendChild(field('대표자 전화번호', phone, true, '팀이면 대표자 한 명의 번호로 들어와요. 작품 여러 개를 이 번호로 낼 수 있어요.'));
+    var fp = field('PIN', pin, true);
+    var fp2 = field('PIN 확인', pin2, true);
+    c.appendChild(fp); c.appendChild(fp2);
+    var msg = el('p', 'msg', '');
+    var go = btn('btn', '들어가기', submit);
+    c.appendChild(go); c.appendChild(msg);
+    c.appendChild(el('p', 'hint', 'PIN을 잊으면 담당 선생님께 말해 주세요. 초기화해 드려요.'));
+    app.appendChild(c);
+    [phone, pin, pin2].forEach(function (i) { i.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); }); });
+    function paint() {
+      b1.setAttribute('aria-pressed', S.mode === 'new'); b2.setAttribute('aria-pressed', S.mode !== 'new');
+      fp2.hidden = S.mode !== 'new';
+      fp.querySelector('span').firstChild.textContent = S.mode === 'new' ? '새 PIN (숫자 4자리)' : 'PIN';
+      go.textContent = S.mode === 'new' ? 'PIN 정하고 시작하기' : '들어가기';
+      msg.textContent = '';
+    }
+    function submit() {
+      msg.textContent = '';
+      if (S.mode === 'new' && pin.value !== pin2.value) { msg.textContent = 'PIN 두 개가 서로 달라요.'; return; }
+      go.disabled = true;
+      call('apiChEnter', phone.value, pin.value, S.mode === 'new').then(function (r) {
+        r = must(r);
+        S.token = r.token; S.phone = r.phone; S.entries = r.entries; setStatus(r.info);
+        try { sessionStorage.setItem('ch_token', r.token); } catch (e) {}
+        r.entries.length || !r.info.open ? drawList() : drawForm(null);
+      }).catch(function (e) { msg.textContent = e.message; go.disabled = false; });
+    }
+    paint();
+  }
+
+  /* ── 내 작품 ── */
+  function drawList(flash) {
+    app.textContent = '';
+    var top = el('div', 'top');
+    top.appendChild(el('strong', '', S.phone + ' 님의 작품'));
+    top.appendChild(btn('link', '나가기', logout));
+    app.appendChild(top);
+    if (flash) { var ok = el('section', 'card done'); ok.appendChild(el('div', 'big', '✓')); ok.appendChild(el('strong', '', flash)); ok.appendChild(el('p', 'hint', '마감 전까지 언제든 들어와서 고칠 수 있어요.')); app.appendChild(ok); }
+    if (!S.entries.length) app.appendChild(el('p', 'hint', '아직 낸 작품이 없어요.'));
+    S.entries.forEach(function (e) {
+      var c = btn('card entry', null, function () { drawForm(e); });
+      var t = el('div'); t.appendChild(el('span', 'k', e.kind)); t.appendChild(el('span', 't', e.title)); c.appendChild(t);
+      var d = el('div', 'd');
+      d.appendChild(document.createTextNode('접수 ' + e.no + '번 · ' + (e.type === '팀' ? '팀 ' + (e.team.length + 1) + '명' : '개인') + ' · '));
+      var vs = e.video ? '영상 ' + (e.dur ? mmss(e.dur) : '올림') : e.link ? '유튜브 링크' : '';
+      d.appendChild(vs ? el('span', 'okk', vs) : el('span', 'warn', '영상이 아직 없어요'));
+      d.appendChild(document.createTextNode(' · AI 증거 ' + e.ev.length + '개'));
+      c.appendChild(d);
+      app.appendChild(c);
+    });
+    if (S.info && S.info.open) app.appendChild(btn('btn', '+ 새 작품 제출', function () { drawForm(null); }));
+    else app.appendChild(el('p', 'hint', '접수 기간이 아니라 볼 수만 있어요.'));
+  }
+
+  /* ── 작품 쓰기·고치기 ── */
+  function drawForm(e) {
+    var open = S.info && S.info.open;
+    var last = S.entries[S.entries.length - 1];
+    var d = e ? JSON.parse(JSON.stringify(e)) : { kind: '', type: '개인', title: '', desc: '', tools: '', link: '', team: [],
+      leader: last ? JSON.parse(JSON.stringify(last.leader)) : { dept: '', grade: '', cls: '', num: '', name: '' }, ev: [], video: null };
+    var queue = { video: null, ev: [] }; // 새로 고른 파일 (저장할 때 올린다)
+    var removed = []; // 뺄 파일 ID
+    app.textContent = '';
+    var top = el('div', 'top');
+    top.appendChild(el('strong', '', e ? '접수 ' + e.no + '번 고치기' : '새 작품 제출'));
+    top.appendChild(btn('link', S.entries.length ? '목록으로' : '나가기', function () { S.entries.length ? drawList() : logout(); }));
+    app.appendChild(top);
+
+    // 부문
+    var c1 = el('section', 'card'); c1.appendChild(el('h2', '', '참여 부문'));
+    var seg = el('div', 'seg');
+    Object.keys(KINDS).forEach(function (k) {
+      var b = btn('', null, function () { d.kind = k; paintKind(); checkVideo(); });
+      b.innerHTML = k + '<small>' + KINDS[k] + '</small>'; b.dataset.k = k; seg.appendChild(b);
+    });
+    c1.appendChild(seg);
+    c1.appendChild(el('h2', '', '참가 형태'));
+    var seg2 = el('div', 'seg');
+    ['개인', '팀'].forEach(function (k) { var b = btn('', k, function () { d.type = k; paintType(); }); b.dataset.k = k; seg2.appendChild(b); });
+    c1.appendChild(seg2);
+    app.appendChild(c1);
+    function paintKind() { [].forEach.call(seg.children, function (b) { b.setAttribute('aria-pressed', b.dataset.k === d.kind); }); }
+
+    // 대표자
+    var c2 = el('section', 'card'); c2.appendChild(el('h2', '', '대표자'));
+    var dl = el('datalist'); dl.id = 'depts'; DEPTS.forEach(function (x) { var o = el('option'); o.value = x; dl.appendChild(o); }); c2.appendChild(dl);
+    function personBox(p) {
+      var box = el('div', 'person');
+      var dept = input('text', p.dept, '학과'); dept.setAttribute('list', 'depts');
+      var g = el('select'); [['', '학년'], ['1', '1학년'], ['2', '2학년'], ['3', '3학년']].forEach(function (o) { var x = el('option', '', o[1]); x.value = o[0]; g.appendChild(x); }); g.value = p.grade || '';
+      var cl = input('number', p.cls, '반'); cl.inputMode = 'numeric'; cl.min = 1; cl.max = 30;
+      var nu = input('number', p.num, '번호'); nu.inputMode = 'numeric'; nu.min = 1; nu.max = 60;
+      var nm = input('text', p.name, '이름');
+      var a = field('학과', dept, true); a.classList.add('dept'); box.appendChild(a);
+      box.appendChild(field('학년', g, true)); box.appendChild(field('반', cl, true)); box.appendChild(field('번호', nu, true));
+      var z = field('이름', nm, true); z.classList.add('nm'); box.appendChild(z);
+      box.read = function () { return { dept: dept.value.trim(), grade: g.value, cls: cl.value.trim(), num: nu.value.trim(), name: nm.value.trim() }; };
+      return box;
+    }
+    var leader = personBox(d.leader); c2.appendChild(leader);
+    var ph = input('tel', S.phone); ph.readOnly = true;
+    var fph = field('대표자 전화번호', ph, false, '들어올 때 쓴 번호예요. 담당 선생님 연락용이에요.'); fph.style.marginTop = '12px';
+    c2.appendChild(fph);
+    app.appendChild(c2);
+
+    // 팀원
+    var c3 = el('section', 'card'); c3.appendChild(el('h2', '', '팀원'));
+    var mbox = el('div'); c3.appendChild(mbox);
+    var members = [];
+    function addMember(p) {
+      var w = el('div', 'member'); var h = el('div', 'mh');
+      var lab = el('span', ''); h.appendChild(lab);
+      h.appendChild(btn('link danger', '빼기', function () { members.splice(members.indexOf(w), 1); w.remove(); relabel(); }));
+      w.appendChild(h); w.box = personBox(p || {}); w.appendChild(w.box);
+      members.push(w); mbox.appendChild(w); relabel();
+    }
+    function relabel() { members.forEach(function (w, i) { w.querySelector('.mh span').textContent = '팀원 ' + (i + 1); }); }
+    (d.team || []).forEach(addMember);
+    c3.appendChild(btn('btn quiet sm', '+ 팀원 추가', function () { addMember(null); }));
+    c3.appendChild(el('p', 'hint', '대표자는 빼고 나머지 팀원만 적어요. 인원 제한은 없어요.'));
+    app.appendChild(c3);
+    function paintType() { [].forEach.call(seg2.children, function (b) { b.setAttribute('aria-pressed', b.dataset.k === d.type); }); c3.hidden = d.type !== '팀'; if (d.type === '팀' && !members.length) addMember(null); }
+
+    // 작품
+    var c4 = el('section', 'card'); c4.appendChild(el('h2', '', '작품'));
+    var title = input('text', d.title, '작품 제목'); title.maxLength = 60;
+    var desc = el('textarea'); desc.value = d.desc; desc.placeholder = '어떤 작품인지 짧게 (선택)'; desc.maxLength = 1500;
+    var tools = input('text', d.tools, '예: ChatGPT, Midjourney, Runway, Suno (선택)'); tools.maxLength = 300;
+    c4.appendChild(field('제목', title, true)); c4.appendChild(field('작품 설명', desc)); c4.appendChild(field('사용한 AI 도구', tools));
+    app.appendChild(c4);
+
+    // 영상
+    var c5 = el('section', 'card'); var h5 = el('h2', '', '영상'); h5.appendChild(el('small', '', '파일 또는 유튜브 링크 (둘 다 가능)')); c5.appendChild(h5);
+    var vbox = el('div', 'files'); c5.appendChild(vbox);
+    var vpick = input('file'); vpick.accept = 'video/*'; vpick.hidden = true; c5.appendChild(vpick);
+    var vbtn = btn('btn quiet sm', '영상 파일 고르기', function () { vpick.click(); }); c5.appendChild(vbtn);
+    var link = input('url', d.link, 'https://youtu.be/...'); var fl = field('유튜브 링크', link, false, '유튜브에 "일부 공개"로 올리고 주소를 붙여 넣어요.'); fl.style.marginTop = '14px';
+    c5.appendChild(fl);
+    app.appendChild(c5);
+    vpick.addEventListener('change', function () {
+      var f = vpick.files[0]; vpick.value = ''; if (!f) return;
+      queue.video = { file: f, dur: 0, bad: '' };
+      readDur(f).then(function (s) { queue.video.dur = s; checkVideo(); }, function () { queue.video.dur = 0; checkVideo(); });
+      paintVideo();
+    });
+    function readDur(f) {
+      return new Promise(function (ok, no) {
+        var v = document.createElement('video'); v.preload = 'metadata'; var u = URL.createObjectURL(f);
+        var t = setTimeout(function () { no(); }, 8000);
+        v.onloadedmetadata = function () { clearTimeout(t); URL.revokeObjectURL(u); isFinite(v.duration) && v.duration > 0 ? ok(v.duration) : no(); };
+        v.onerror = function () { clearTimeout(t); URL.revokeObjectURL(u); no(); };
+        v.src = u;
+      });
+    }
+    function durProblem(kind, s) {
+      if (!s || !kind) return '';
+      if (kind === '숏폼' && s > 60.9) return '숏폼은 1분 이내예요. (이 영상 ' + mmss(s) + ')';
+      if (kind === '롱폼' && (s < 180 || s >= 600)) return '롱폼은 3분 이상 10분 미만이에요. (이 영상 ' + mmss(s) + ')';
+      return '';
+    }
+    function checkVideo() { if (queue.video) queue.video.bad = durProblem(d.kind, queue.video.dur); paintVideo(); }
+    function paintVideo() {
+      vbox.textContent = '';
+      var cur = d.video && removed.indexOf(d.video.id) < 0 && !queue.video ? d.video : null;
+      if (cur) {
+        var r = el('div', 'file'); r.appendChild(el('span', 'nm', cur.n)); r.appendChild(el('small', '', (d.dur ? mmss(d.dur) + ' · ' : '') + size(cur.s)));
+        if (open) r.appendChild(btn('link danger', '빼기', function () { removed.push(cur.id); paintVideo(); }));
+        vbox.appendChild(r);
+      }
+      if (queue.video) {
+        var q = queue.video, r2 = el('div', 'file ' + (q.bad ? 'bad' : 'new'));
+        r2.appendChild(el('span', 'nm', q.file.name)); r2.appendChild(el('small', '', (q.dur ? mmss(q.dur) + ' · ' : '') + size(q.file.size)));
+        r2.appendChild(btn('link danger', '취소', function () { queue.video = null; paintVideo(); }));
+        vbox.appendChild(r2);
+        if (q.bad) vbox.appendChild(el('p', 'msg', q.bad));
+        else if (!q.dur) vbox.appendChild(el('p', 'hint', '영상 길이를 읽지 못했어요. 그대로 올리면 선생님이 확인해요.'));
+        else if (cur) {}
+      }
+      vbtn.textContent = cur || queue.video ? '다른 영상으로 바꾸기' : '영상 파일 고르기';
+      vbtn.hidden = !open;
+    }
+
+    // AI 증거
+    var c6 = el('section', 'card'); var h6 = el('h2', '', 'AI 사용 증거'); h6.appendChild(el('small', '', '캡처, 프롬프트 기록, PDF 등 ' + EV_MAX + '개까지')); c6.appendChild(h6);
+    var ebox = el('div', 'files'); c6.appendChild(ebox);
+    var epick = input('file'); epick.multiple = true; epick.hidden = true; c6.appendChild(epick);
+    var ebtn = btn('btn quiet sm', '+ 파일 추가', function () { epick.click(); }); c6.appendChild(ebtn);
+    var emsg = el('p', 'msg', ''); c6.appendChild(emsg);
+    app.appendChild(c6);
+    function evCount() { return d.ev.filter(function (x) { return removed.indexOf(x.id) < 0; }).length + queue.ev.length; }
+    epick.addEventListener('change', function () {
+      var fs = [].slice.call(epick.files); epick.value = ''; emsg.textContent = '';
+      fs.forEach(function (f) { if (evCount() >= EV_MAX) { emsg.textContent = EV_MAX + '개까지만 올릴 수 있어요.'; return; } if (f.size > 200 * MB) { emsg.textContent = f.name + ': 200MB까지예요.'; return; } queue.ev.push({ file: f }); });
+      paintEv();
+    });
+    function paintEv() {
+      ebox.textContent = '';
+      d.ev.forEach(function (x) {
+        if (removed.indexOf(x.id) >= 0) return;
+        var r = el('div', 'file'); r.appendChild(el('span', 'nm', x.n)); r.appendChild(el('small', '', size(x.s)));
+        if (open) r.appendChild(btn('link danger', '빼기', function () { removed.push(x.id); paintEv(); }));
+        ebox.appendChild(r);
+      });
+      queue.ev.forEach(function (q, i) {
+        var r = el('div', 'file new'); r.appendChild(el('span', 'nm', q.file.name)); r.appendChild(el('small', '', size(q.file.size)));
+        r.appendChild(btn('link danger', '취소', function () { queue.ev.splice(i, 1); paintEv(); }));
+        ebox.appendChild(r);
+      });
+      ebtn.hidden = !open || evCount() >= EV_MAX;
+    }
+    var hint = el('p', 'hint', '올린 파일 이름은 "접수번호_부문_제목_이름"으로 자동으로 바뀌어요.'); c6.appendChild(hint);
+
+    // 동의
+    var c7 = el('section', 'card'); c7.appendChild(el('h2', '', '확인'));
+    function check(text, sub, on) { var l = el('label', 'check'); var i = input('checkbox'); i.checked = !!on; l.appendChild(i); var t = el('span', '', text); if (sub) t.appendChild(el('small', '', sub)); l.appendChild(t); l.box = i; return l; }
+    var a1 = check('개인정보 수집·이용에 동의합니다.', '수집 항목: 학과·학년·반·번호·이름(대표자·팀원), 대표자 전화번호 / 목적: 대회 접수와 연락 / 대회가 끝나면 지웁니다.', !!e);
+    var a2 = check('저작권·초상권 문제가 없음을 확인합니다.', '작품에 쓴 음악·이미지·영상·글꼴의 사용 권리와, 영상에 나오는 사람의 동의를 확인했어요.', !!e);
+    c7.appendChild(a1); c7.appendChild(a2);
+    app.appendChild(c7);
+
+    var msg = el('p', 'msg', '');
+    var save = btn('btn', e ? '고친 내용 저장' : '제출하기', submit);
+    app.appendChild(save); app.appendChild(msg);
+    if (e && open) app.appendChild(btn('link danger', '이 작품 접수 취소', cancel));
+    if (!open) { save.disabled = true; msg.textContent = '접수 기간이 아니라 고칠 수 없어요.'; [].forEach.call(app.querySelectorAll('input,select,textarea'), function (x) { x.disabled = true; }); }
+
+    paintKind(); paintType(); paintVideo(); paintEv();
+
+    function collect() {
+      return { no: e ? e.no : '', kind: d.kind, type: d.type, title: title.value.trim(), desc: desc.value.trim(), tools: tools.value.trim(), link: link.value.trim(),
+        leader: leader.read(), team: d.type === '팀' ? members.map(function (w) { return w.box.read(); }) : [], agreePrivacy: a1.box.checked, agreeRights: a2.box.checked };
+    }
+    function submit() {
+      msg.textContent = '';
+      var x = collect();
+      if (!x.kind) { msg.textContent = '참여 부문(숏폼/롱폼)을 골라 주세요.'; return; }
+      if (!x.title) { msg.textContent = '작품 제목을 적어 주세요.'; title.focus(); return; }
+      if (queue.video && queue.video.bad) { msg.textContent = queue.video.bad; return; }
+      var hasVideo = queue.video || (d.video && removed.indexOf(d.video.id) < 0) || x.link;
+      if (!hasVideo && !confirm('영상이 아직 없어요. 지금은 정보만 저장하고, 영상은 나중에 올릴까요?')) return;
+      save.disabled = true;
+      var no;
+      var ov = overlay();
+      ov.say('저장하는 중', '');
+      call('apiChSave', S.token, x).then(function (r) {
+        r = must(r); no = r.no; S.entries = r.entries;
+        var chain = Promise.resolve();
+        removed.forEach(function (id) { chain = chain.then(function () { return call('apiChRemoveFile', S.token, no, id).then(must); }); });
+        var jobs = [];
+        if (queue.video) jobs.push({ role: 'video', file: queue.video.file, dur: queue.video.dur });
+        queue.ev.forEach(function (q) { jobs.push({ role: 'ev', file: q.file, dur: 0 }); });
+        jobs.forEach(function (j, k) { chain = chain.then(function () { return upload(no, j, k + 1, jobs.length, ov); }); });
+        return chain.then(function () { return call('apiChList', S.token).then(must); });
+      }).then(function (r) {
+        S.entries = r.entries; ov.close();
+        drawList(e ? '저장했어요.' : '접수됐어요! 접수번호 ' + no + '번');
+        window.scrollTo(0, 0);
+      }).catch(function (err) {
+        ov.close(); save.disabled = false;
+        msg.textContent = err.message + (no ? '\n(작품 정보는 저장됐어요. 목록에서 다시 열어 파일만 올리면 돼요.)' : '');
+        if (no) { e = S.entries.filter(function (z) { return z.no === no; })[0] || e; }
+      });
+    }
+    function cancel() {
+      if (!confirm('접수 ' + e.no + '번을 취소할까요? 올린 파일도 모두 지워져요.')) return;
+      call('apiChCancel', S.token, e.no).then(function (r) { r = must(r); S.entries = r.entries; drawList(); }).catch(function (err) { msg.textContent = err.message; });
+    }
+  }
+
+  // 파일 하나 올리기: 서버가 드라이브 업로드 주소를 주면 브라우저가 거기로 바로 보낸다
+  function upload(no, j, k, n, ov) {
+    var label = (j.role === 'video' ? '영상' : 'AI 증거') + ' 올리는 중 (' + k + '/' + n + ')';
+    ov.say(label, j.file.name, 0);
+    return call('apiChUploadStart', S.token, no, j.role, j.file.name, j.file.type || 'application/octet-stream', j.file.size, location.origin).then(must).then(function (st) {
+      return new Promise(function (ok, fail) {
+        var x = new XMLHttpRequest(), sent = 0;
+        x.open('PUT', st.url);
+        x.upload.onprogress = function (ev) { if (ev.lengthComputable) { sent = ev.loaded / ev.total; ov.say(label, j.file.name, sent); } };
+        x.onload = function () {
+          if (x.status === 200 || x.status === 201) { var id = ''; try { id = JSON.parse(x.responseText).id; } catch (e) {} ok({ id: id, name: st.name }); }
+          else fail(new Error('파일을 올리지 못했어요. (' + x.status + ') 다시 해 주세요.'));
+        };
+        x.onerror = function () { sent >= 0.999 ? ok({ id: '', name: st.name }) : fail(new Error('올리다가 끊겼어요. 인터넷을 확인하고 다시 해 주세요.')); };
+        x.send(j.file);
+      });
+    }).then(function (res) {
+      ov.say(label, '확인하는 중', 1);
+      return call('apiChUploadDone', S.token, no, j.role, res.id, j.dur, res.name).then(must);
+    });
+  }
+  function overlay() {
+    var o = el('div', 'ov'), b = el('div', 'box'); o.appendChild(b);
+    var h = el('h3', ''), nm = el('div', 'up nm'), bar = el('div', 'bar'), i = el('i'); bar.appendChild(i);
+    var p = el('p', 'hint', '다 올라갈 때까지 이 화면을 닫지 마세요.');
+    b.appendChild(h); b.appendChild(nm); b.appendChild(bar); b.appendChild(p);
+    document.body.appendChild(o);
+    return { say: function (t, n, v) { h.textContent = t; nm.textContent = n || ''; bar.hidden = v == null; i.style.width = Math.round((v || 0) * 100) + '%'; }, close: function () { o.remove(); } };
+  }
+
+  // 시작
+  call('apiChInfo').then(function (info) {
+    setStatus(info);
+    if (!S.token) return drawEnter();
+    return call('apiChList', S.token).then(function (r) {
+      if (!r || !r.ok) return logout();
+      S.phone = r.phone; S.entries = r.entries; setStatus(r.info); drawList();
+    });
+  }).catch(function (e) { app.textContent = ''; var c = el('section', 'card'); c.appendChild(el('p', 'msg', e.message)); c.appendChild(btn('btn quiet', '다시 시도', function () { location.reload(); })); app.appendChild(c); });
+})();
+</script>
+</body>
+</html>

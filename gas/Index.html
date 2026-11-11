@@ -332,6 +332,21 @@
   .summary button { border: 0; background: none; padding: 4px 0; color: var(--accent-ink, var(--accent)); font-size: 14px; cursor: pointer; }
   .who-btn { border: 0; background: none; padding: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; }
   .who-btn:hover { color: var(--accent); }
+  .ch-dl { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 16px; }
+  .ch-dl .row-text { flex: 1; min-width: 180px; }
+  .ch-dt { display: flex; gap: 8px; align-items: center; }
+  .ch-dt input { min-height: 40px; padding: 6px 10px; border: 0; border-radius: 10px; background: var(--fill); color: var(--ink); font: inherit; font-size: 15px; }
+  .ch-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 6px; }
+  .ch-links .btn.sm { width: auto; height: 38px; min-height: 0; margin: 0; padding: 0 14px; font-size: 14px; display: inline-flex; align-items: center; text-decoration: none; }
+  .ch-seg { display: flex; flex-wrap: wrap; gap: 6px; margin: 18px 0 10px; }
+  .ch-row { width: 100%; text-align: left; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; }
+  .ch-no { display: inline-block; min-width: 34px; color: var(--sub); font-variant-numeric: tabular-nums; }
+  .ch-k { display: inline-block; padding: 1px 7px; margin-right: 8px; border-radius: 6px; background: var(--fill); font-size: 12px; font-weight: 700; vertical-align: 1px; }
+  .ch-warn { color: var(--danger) !important; }
+  .ch-info { display: grid; gap: 6px; margin: 8px 0 14px; font-size: 15px; }
+  .ch-line { display: flex; gap: 12px; }
+  .ch-line .k { flex: none; width: 72px; color: var(--sub); }
+  .ch-line .v { flex: 1; min-width: 0; white-space: pre-line; word-break: break-all; }
   .sum-acts { display: flex; gap: 16px; flex-wrap: wrap; justify-content: flex-end; }
   .copy-head { display: flex; justify-content: space-between; align-items: baseline; margin: 4px 0 6px; }
   .copy-head .link { width: auto; margin: 0; padding: 4px 0; }
@@ -2213,6 +2228,9 @@
     var mb = button('', '메인 짤', function () { goT(MEME_VIEW); });
     mb.dataset.view = MEME_VIEW;
     $('tnav').appendChild(mb);
+    var chb = button('', 'AI 챌린지', function () { goT(CH_VIEW); });
+    chb.dataset.view = CH_VIEW;
+    $('tnav').appendChild(chb);
     drawTeacher();
     view('tapp');
   }
@@ -2222,7 +2240,7 @@
     b.addEventListener('click', function () { tView = b.dataset.tview; if (tView === 'surveys') tSurvey = null; drawTeacher(); });
   });
 
-  var MEME_VIEW = '__meme';
+  var MEME_VIEW = '__meme', CH_VIEW = '__challenge';
   function drawTeacher() {
     markNav($('tnav'), tCourse);
     var course = courseById(board.courses, tCourse);
@@ -2232,6 +2250,7 @@
     box.textContent = '';
     $('tseg').hidden = true;
     if (tCourse === MEME_VIEW) return loadMemeAdmin();
+    if (tCourse === CH_VIEW) return loadChAdmin();
     if (!course) { $('tTitle').textContent = '수업 없음'; $('tSub').textContent = ''; return; }
     keep(localStorage, TLAST_KEY, JSON.stringify({ course: tCourse, view: tView }));
     $('tSub').textContent = course.desc;
@@ -3309,6 +3328,145 @@
   }
 
   /* ── 메인 짤 관리 (교사) ── */
+
+  /* ── AI 크리에이터 챌린지 접수 관리 ── */
+  var CH_PAGE = 'https://total-page.pages.dev/challenge/';
+  var ch = { data: null, kind: '' };
+  function loadChAdmin() {
+    $('tSub').textContent = '전교생 · 작품 접수';
+    $('tTitle').textContent = 'AI 크리에이터 챌린지';
+    var box = $('tcontent');
+    spin(box);
+    call('apiTeacherCh', ttoken).then(function (res) { if (tCourse === CH_VIEW) { ch.data = must(res); drawChAdmin(); } })
+      .catch(function (err) { if (err && err.message === 'expired') return; box.textContent = ''; box.appendChild(el('p', 'empty', friendly(err))); });
+  }
+  function chMmss(s) { s = Math.round(s); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
+  function chDurBad(e) { if (!e.dur) return false; return e.kind === '숏폼' ? e.dur > 60.9 : (e.dur < 180 || e.dur >= 600); }
+  function chLocalInput(ms) { if (!ms) return ''; var d = new Date(ms - new Date().getTimezoneOffset() * 60000); return d.toISOString().slice(0, 16); }
+  function drawChAdmin() {
+    var d = ch.data, box = $('tcontent');
+    box.textContent = '';
+    var live = d.entries.filter(function (e) { return e.state !== '취소'; });
+    // 접수 설정
+    var sum = el('div', 'summary');
+    var cnt = el('div');
+    cnt.appendChild(el('strong', '', '접수 ' + live.length + '건'));
+    cnt.appendChild(el('span', '', ' / 숏폼 ' + live.filter(function (e) { return e.kind === '숏폼'; }).length + ' · 롱폼 ' + live.filter(function (e) { return e.kind === '롱폼'; }).length));
+    sum.appendChild(cnt);
+    var acts = el('div', 'sum-acts');
+    acts.appendChild(button('', '명단 CSV', chCsv));
+    acts.appendChild(button('', '새로고침', loadChAdmin));
+    sum.appendChild(acts);
+    box.appendChild(sum);
+
+    var set = el('div', 'list toggles');
+    var on = toggleRow('접수 받기', d.settings.open ? '지금 학생들이 낼 수 있어요.' : (d.settings.on ? '마감 시각이 지났어요.' : '꺼져 있어요. 학생은 볼 수만 있어요.'), d.settings.on, function (v) { chSet({ on: v }); });
+    set.appendChild(on);
+    var dl = el('div', 'row ch-dl');
+    var dt = el('input'); dt.type = 'datetime-local'; dt.value = chLocalInput(d.settings.deadline);
+    var dtx = el('div', 'row-text'); dtx.appendChild(el('div', 'row-title', '마감 일시')); dtx.appendChild(el('div', 'row-desc', d.settings.deadline ? '이 시각이 지나면 새로 내기·고치기가 막혀요.' : '정하지 않으면 끌 때까지 계속 받아요.'));
+    dl.appendChild(dtx);
+    var dr = el('div', 'ch-dt'); dr.appendChild(dt);
+    dr.appendChild(button('mini', '저장', function () { chSet({ deadline: dt.value ? new Date(dt.value).getTime() : 0 }); }));
+    dl.appendChild(dr);
+    set.appendChild(dl);
+    box.appendChild(set);
+
+    // 주소·폴더
+    var links = el('div', 'ch-links');
+    var addr = button('btn quiet sm', '제출 페이지 주소 복사', function () {
+      (navigator.clipboard ? navigator.clipboard.writeText(CH_PAGE) : Promise.reject()).then(function () { addr.textContent = '복사했어요'; }, function () { alertSheet(CH_PAGE); });
+    });
+    links.appendChild(addr);
+    var open = function (t, u) { var a = el('a', 'btn quiet sm', t); a.href = u; a.target = '_blank'; a.rel = 'noopener'; links.appendChild(a); };
+    open('제출 페이지 열기', CH_PAGE);
+    open('드라이브: 전체', d.rootUrl);
+    open('숏폼 폴더', d.kindUrls['숏폼']); open('롱폼 폴더', d.kindUrls['롱폼']);
+    open('시트 열기', d.sheetUrl);
+    box.appendChild(links);
+    box.appendChild(el('p', 'hint', '드라이브에서 폴더를 오른쪽 클릭 → 다운로드하면 zip으로 받아져요. 파일 이름은 "접수번호_부문_제목_대표이름"으로 바뀌어 있어요.'));
+
+    // 목록
+    var seg = el('div', 'ch-seg');
+    [['', '전체'], ['숏폼', '숏폼'], ['롱폼', '롱폼'], ['취소', '취소']].forEach(function (k) {
+      var b = button('dc', k[1], function () { ch.kind = k[0]; drawChAdmin(); });
+      b.setAttribute('aria-pressed', ch.kind === k[0] ? 'true' : 'false');
+      seg.appendChild(b);
+    });
+    box.appendChild(seg);
+    var list = el('div', 'list');
+    var rows = d.entries.filter(function (e) { return ch.kind === '취소' ? e.state === '취소' : e.state !== '취소' && (!ch.kind || e.kind === ch.kind); });
+    rows.forEach(function (e) {
+      var r = button('row ch-row', null, function () { chDetail(e); });
+      var t = el('div', 'row-text');
+      var tt = el('div', 'row-title'); tt.appendChild(el('span', 'ch-no', e.no)); tt.appendChild(el('span', 'ch-k', e.kind)); tt.appendChild(document.createTextNode(e.title)); t.appendChild(tt);
+      var L = e.leader;
+      var bits = [L.dept + ' ' + L.grade + '-' + L.cls + '-' + L.num + ' ' + L.name + (e.type === '팀' ? ' 외 ' + e.team.length + '명' : '')];
+      bits.push(e.video ? '영상 ' + (e.dur ? chMmss(e.dur) : '길이 모름') : e.link ? '유튜브' : '영상 없음');
+      bits.push('증거 ' + e.ev.length);
+      var desc = el('div', 'row-desc', bits.join(' · '));
+      if (!e.video && !e.link || chDurBad(e)) desc.classList.add('ch-warn');
+      t.appendChild(desc);
+      r.appendChild(t);
+      list.appendChild(r);
+    });
+    if (!rows.length) list.appendChild(el('p', 'empty', ch.kind === '취소' ? '취소한 작품이 없어요.' : '아직 접수된 작품이 없어요.'));
+    box.appendChild(list);
+  }
+  function chSet(x) {
+    call('apiTeacherChSet', ttoken, x).then(function (res) { ch.data = must(res); drawChAdmin(); })
+      .catch(function (err) { if (err && err.message !== 'expired') alertSheet(friendly(err)); });
+  }
+  function chDetail(e) {
+    var w = el('div');
+    w.appendChild(el('h3', '', e.no + '번 · ' + e.title));
+    var L = e.leader;
+    var info = el('div', 'ch-info');
+    var line = function (k, v) { if (!v) return; var r = el('div', 'ch-line'); r.appendChild(el('span', 'k', k)); r.appendChild(el('span', 'v', v)); info.appendChild(r); };
+    line('부문', e.kind + (e.state === '취소' ? ' (취소함)' : ''));
+    line('참가', e.type === '팀' ? '팀 ' + (e.team.length + 1) + '명' : '개인');
+    line('대표자', L.dept + ' ' + L.grade + '학년 ' + L.cls + '반 ' + L.num + '번 ' + L.name);
+    line('전화', e.phone);
+    if (e.team.length) line('팀원', e.team.map(function (m) { return m.dept + ' ' + m.grade + '-' + m.cls + '-' + m.num + ' ' + m.name; }).join('\n'));
+    line('설명', e.desc); line('AI 도구', e.tools);
+    line('영상 길이', e.dur ? chMmss(e.dur) + (chDurBad(e) ? '  ⚠ 부문 기준과 안 맞음' : '') : (e.video ? '읽지 못함 (직접 확인)' : ''));
+    line('접수', e.at ? new Date(e.at).toLocaleString('ko-KR') : ''); line('수정', e.mat ? new Date(e.mat).toLocaleString('ko-KR') : '');
+    w.appendChild(info);
+    var files = el('div', 'n-files');
+    var fl = function (label, f) { var a = el('a', 'n-file'); a.href = 'https://drive.google.com/file/d/' + encodeURIComponent(f.id) + '/view'; a.target = '_blank'; a.rel = 'noopener';
+      a.appendChild(el('span', 'ext', label)); a.appendChild(el('span', 'nm', f.n)); a.appendChild(el('small', '', sizeText(f.s))); files.appendChild(a); };
+    if (e.video) fl('영상', e.video);
+    if (e.link) { var a = el('a', 'n-file'); a.href = e.link; a.target = '_blank'; a.rel = 'noopener'; a.appendChild(el('span', 'ext', 'YT')); a.appendChild(el('span', 'nm', e.link)); files.appendChild(a); }
+    e.ev.forEach(function (f, i) { fl('증거' + (i + 1), f); });
+    w.appendChild(files);
+    var pair = el('div', 'pair');
+    var fo = el('a', 'btn quiet', '작품 폴더 (zip 받기)'); fo.href = 'https://drive.google.com/drive/folders/' + encodeURIComponent(e.folder); fo.target = '_blank'; fo.rel = 'noopener';
+    fo.style.cssText = 'display:flex;align-items:center;justify-content:center;text-decoration:none';
+    pair.appendChild(fo);
+    pair.appendChild(button('btn', '닫기', closeSheet));
+    w.appendChild(pair);
+    var armed = false;
+    var rp = button('link', '이 번호의 PIN 초기화', function () {
+      if (!armed) { armed = true; rp.textContent = '한 번 더 누르면 초기화합니다'; return; }
+      call('apiTeacherChResetPin', ttoken, e.phone).then(function (r) { must(r); rp.textContent = '초기화했어요. 학생이 "처음 제출해요"로 새 PIN을 정하면 돼요.'; rp.disabled = true; })
+        .catch(function (err) { if (err && err.message !== 'expired') rp.textContent = friendly(err); });
+    });
+    w.appendChild(rp);
+    openSheet(w);
+  }
+  function chCsv() {
+    var q = function (v) { v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    var head = ['접수번호', '부문', '참가', '제목', '대표 학과', '학년', '반', '번호', '대표 이름', '대표 전화', '팀원', '영상 파일', '영상 길이', '유튜브 링크', 'AI 증거 수', '사용한 AI 도구', '작품 설명', '상태', '접수일시'];
+    var lines = [head.join(',')];
+    ch.data.entries.forEach(function (e) {
+      var L = e.leader;
+      lines.push([e.no, e.kind, e.type, e.title, L.dept, L.grade, L.cls, L.num, L.name, e.phone,
+        e.team.map(function (m) { return m.dept + ' ' + m.grade + '-' + m.cls + '-' + m.num + ' ' + m.name; }).join(' / '),
+        e.video ? e.video.n : '', e.dur ? chMmss(e.dur) : '', e.link, e.ev.length, e.tools, e.desc, e.state, e.at ? new Date(e.at).toLocaleString('ko-KR') : ''].map(q).join(','));
+    });
+    var blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    var a = el('a'); a.href = URL.createObjectURL(blob); a.download = 'AI크리에이터챌린지_접수명단.csv'; document.body.appendChild(a); a.click(); a.remove();
+  }
   function loadMemeAdmin() {
     $('tSub').textContent = '전체 학생 공통';
     $('tTitle').textContent = '메인 짤';

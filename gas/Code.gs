@@ -27,7 +27,7 @@ const CFG_HELP = {
 const LEGACY = { school: '인천디자인고등학교', tab: '쉅', refsLabel: '레퍼런스' };
 const SCHEMA_VERSION = '20';            // 시트 구조가 바뀌는 업데이트마다 올린다 → 첫 접속 때 setup이 자동으로 돈다
 const TZ = 'Asia/Seoul';
-const SHEET = { TRIPS: '체험학습', CHECKS: '체크', COURSES: '수업', STUDENTS: '학생', NOTICES: '공지', REFS: '레퍼런스', TASKS: '과제', SUBS: '제출', GRADES: '채점', ALLOW: '허용', LOG: '로그', CONFIG: '설정', START: '시작하기', SURVEYS: '설문', ANSWERS: '응답', MEMES: '메인짤', ATTEND: '출결', VIBE: '바이브코딩' };
+const SHEET = { TRIPS: '체험학습', CHECKS: '체크', COURSES: '수업', STUDENTS: '학생', NOTICES: '공지', REFS: '레퍼런스', TASKS: '과제', SUBS: '제출', GRADES: '채점', ALLOW: '허용', LOG: '로그', CONFIG: '설정', START: '시작하기', SURVEYS: '설문', ANSWERS: '응답', MEMES: '메인짤', ATTEND: '출결', VIBE: '바이브코딩', CH: '챌린지', CHPIN: '챌린지 PIN' };
 
 const PIN_LENGTH = 4;          // PIN 자릿수
 const MAX_FAILS = 5;           // 연속 오류 허용 횟수
@@ -3005,7 +3005,7 @@ function sheet_(name) {
   if (sh) return sh;
   const auto = {};
   auto[SHEET.SUBS] = SUB_HEADERS; auto[SHEET.GRADES] = GRADE_HEADERS; auto[SHEET.ALLOW] = ALLOW_HEADERS; auto[SHEET.LOG] = LOG_HEADERS;
-  auto[SHEET.SURVEYS] = SURVEY_HEADERS; auto[SHEET.ANSWERS] = ANSWER_HEADERS; auto[SHEET.MEMES] = MEME_HEADERS; auto[SHEET.ATTEND] = ATTEND_HEADERS; auto[SHEET.CHECKS] = CHECK_HEADERS; auto[SHEET.TRIPS] = TRIP_HEADERS; auto[SHEET.VIBE] = VIBE_HEADERS;
+  auto[SHEET.SURVEYS] = SURVEY_HEADERS; auto[SHEET.ANSWERS] = ANSWER_HEADERS; auto[SHEET.MEMES] = MEME_HEADERS; auto[SHEET.ATTEND] = ATTEND_HEADERS; auto[SHEET.CHECKS] = CHECK_HEADERS; auto[SHEET.TRIPS] = TRIP_HEADERS; auto[SHEET.VIBE] = VIBE_HEADERS; auto[SHEET.CH] = CH_HEADERS; auto[SHEET.CHPIN] = CHPIN_HEADERS;
   if (!auto[name]) throw new Error('[' + name + '] 시트가 없습니다. 편집기에서 setup을 먼저 실행해 주세요.');
   try { sh = ss.insertSheet(name); } catch (e) { sh = ss.getSheetByName(name); } // 동시에 두 요청이 만들려 한 경우
   if (!sh) throw new Error('[' + name + '] 시트를 만들지 못했습니다. 편집기에서 setup을 실행해 주세요.');
@@ -3670,4 +3670,368 @@ function apiVibeSave(token, data, summary) {
   } finally {
     lock.releaseLock();
   }
+}
+
+
+/* ═════════════ AI 크리에이터 챌린지 작품 접수 ═════════════
+   전교생 대상 별도 창구(total-page.pages.dev/challenge). 학생 명단과 상관없이 받는다.
+   - 들어오기: 대표자 전화번호 + 직접 정한 PIN (비회원 주문 조회처럼). 한 번호로 작품 여러 개.
+   - 영상·증거 파일은 브라우저가 구글 드라이브로 바로 올린다 (서버는 업로드 주소만 만들어 준다 → 큰 영상도 됨).
+   - 드라이브: 제출함 / AI 크리에이터 챌린지 / 숏폼·롱폼 / 접수번호_이름_제목 / (이름 자동으로 바꾼 파일들)
+     폴더째 내려받으면 드라이브가 zip으로 묶어 준다. */
+const CH_TITLE = 'AI 크리에이터 챌린지';
+const CH_HEADERS = ['접수번호', '부문', '참가', '제목', '설명', '사용한 AI 도구', '대표 학과', '대표 학년', '대표 반', '대표 번호', '대표 이름', '대표 전화',
+  '팀원', '영상', '영상 길이(초)', '유튜브 링크', 'AI 증거 파일', '폴더ID', '상태', '제출일시', '수정일시', '팀원 데이터', '파일 데이터'];
+const CH = { NO: 0, KIND: 1, TYPE: 2, TITLE: 3, DESC: 4, TOOLS: 5, DEPT: 6, GRADE: 7, CLS: 8, NUM: 9, NAME: 10, PHONE: 11, TEAM: 12, VIDEO: 13, DUR: 14,
+  LINK: 15, EV: 16, FOLDER: 17, STATE: 18, AT: 19, MAT: 20, TEAMJ: 21, FILESJ: 22 };
+const CHPIN_HEADERS = ['전화', 'PIN해시', '솔트', '실패횟수', '잠금해제시각', '만든일시'];
+const CH_KINDS = ['숏폼', '롱폼'];
+const CH_EV_MAX = 5;
+const CH_VIDEO_MAX = 2048 * MB, CH_EV_SIZE_MAX = 200 * MB;
+const CH_ORIGINS = /^(https:\/\/total-page\.pages\.dev|https:\/\/[a-z0-9-]+\.total-page\.pages\.dev|http:\/\/localhost(:\d+)?)$/;
+
+function chPhone_(v) { const d = String(v || '').replace(/\D/g, ''); return /^01\d{8,9}$/.test(d) ? d : ''; }
+function chPhoneText_(d) { return d.length === 11 ? d.slice(0, 3) + '-' + d.slice(3, 7) + '-' + d.slice(7) : d.slice(0, 3) + '-' + d.slice(3, 6) + '-' + d.slice(6); }
+function chSettings_() {
+  const p = PropertiesService.getScriptProperties();
+  const deadline = Number(p.getProperty('CH_DEADLINE')) || 0;
+  const on = p.getProperty('CH_OPEN') !== '0';
+  return { on: on, deadline: deadline, open: on && (!deadline || Date.now() < deadline) };
+}
+function chClosedMsg_(st) { return !st.on ? '지금은 접수를 받지 않아요.' : '접수가 마감됐어요.'; }
+function chFile_(s) { return String(s == null ? '' : s).replace(/[\\\/:*?"<>|\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60); }
+function chJson_(v, d) { try { const x = JSON.parse(String(v || '')); return x == null ? d : x; } catch (e) { return d; } }
+function chFiles_(r) { const f = chJson_(r[CH.FILESJ], {}); return { video: f.video || null, ev: Array.isArray(f.ev) ? f.ev : [] }; }
+function chRows_() {
+  const sh = sheet_(SHEET.CH);
+  return { sh: sh, rows: read_(sh, CH_HEADERS.length) };
+}
+function chFind_(rows, no) { for (let i = 0; i < rows.length; i++) if (String(rows[i][CH.NO]) === String(no)) return i; return -1; }
+function chView_(r, forTeacher) {
+  const files = chFiles_(r);
+  const v = {
+    no: String(r[CH.NO]), kind: String(r[CH.KIND]), type: String(r[CH.TYPE]), title: String(r[CH.TITLE]), desc: String(r[CH.DESC]), tools: String(r[CH.TOOLS]),
+    leader: { dept: String(r[CH.DEPT]), grade: String(r[CH.GRADE]), cls: String(r[CH.CLS]), num: String(r[CH.NUM]), name: String(r[CH.NAME]) },
+    team: chJson_(r[CH.TEAMJ], []), link: String(r[CH.LINK]), dur: Number(r[CH.DUR]) || 0, state: String(r[CH.STATE]),
+    at: r[CH.AT] ? new Date(r[CH.AT]).getTime() : 0, mat: r[CH.MAT] ? new Date(r[CH.MAT]).getTime() : 0,
+    video: files.video ? { id: files.video.id, n: files.video.n, s: files.video.s } : null,
+    ev: files.ev.map(function (f) { return { id: f.id, n: f.n, s: f.s }; })
+  };
+  if (forTeacher) { v.phone = chPhoneText_(String(r[CH.PHONE])); v.folder = String(r[CH.FOLDER]); }
+  return v;
+}
+function chMine_(phone) {
+  return chRows_().rows.filter(function (r) { return String(r[CH.NO]) && String(r[CH.PHONE]) === phone && r[CH.STATE] !== '취소'; })
+    .map(function (r) { return chView_(r, false); }).sort(function (a, b) { return a.at - b.at; });
+}
+function chSession_(token) {
+  const phone = token ? CacheService.getScriptCache().get('ch:' + token) : null;
+  return phone || null;
+}
+function chRoot_() { return childFolder_(rootFolder_(), CH_TITLE); }
+function chFolderName_(no, name, title) { return chFile_(no + '_' + name + '_' + title); }
+function chBase_(r) { return chFile_(r[CH.NO] + '_' + r[CH.KIND] + '_' + r[CH.TITLE] + '_' + r[CH.NAME]); }
+function chExt_(name) { const m = String(name || '').match(/\.([A-Za-z0-9]{1,8})$/); return m ? '.' + m[1].toLowerCase() : ''; }
+
+function apiChInfo() {
+  const st = chSettings_();
+  return { ok: true, title: CH_TITLE, open: st.open, on: st.on, deadline: st.deadline, now: Date.now() };
+}
+
+/** 들어오기. isNew면 이 번호로 처음 PIN을 정한다. */
+function apiChEnter(phone, pin, isNew) {
+  phone = chPhone_(phone); pin = String(pin || '');
+  if (!phone) return fail_('전화번호를 010으로 시작하는 숫자로 적어 주세요.');
+  if (!/^\d{4}$/.test(pin)) return fail_('PIN은 숫자 4자리예요.');
+  const sh = sheet_(SHEET.CHPIN);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const rows = read_(sh, CHPIN_HEADERS.length);
+    let i = -1;
+    for (let k = 0; k < rows.length; k++) if (String(rows[k][0]).replace(/\D/g, '') === phone) { i = k; break; }
+    if (i < 0) {
+      if (!isNew) return fail_('처음 제출하는 번호예요. 위에서 "처음 제출해요"를 골라 PIN을 정해 주세요.');
+      if (!chSettings_().open) return fail_(chClosedMsg_(chSettings_()));
+      if (/^(\d)\1+$/.test(pin) || pin === '1234' || phone.indexOf(pin) >= 0) return fail_('추측하기 쉬운 PIN이에요. 전화번호에 없는 다른 숫자 4자리로 정해 주세요.');
+      const salt = Utilities.getUuid();
+      const row = freeRow_(sh, 1);
+      sh.getRange(row, 1, 1, CHPIN_HEADERS.length).setNumberFormat('@').setValues([[phone, hashPin_(pin, salt), salt, '0', '', new Date().toISOString()]]);
+    } else {
+      if (isNew) return fail_('이미 PIN을 정한 번호예요. "이어서 수정해요"를 골라 그 PIN으로 들어와 주세요.');
+      const r = rows[i], until = Number(r[4]) || 0;
+      if (until > Date.now()) return fail_('PIN을 여러 번 틀려 잠겼어요. ' + Math.ceil((until - Date.now()) / 60000) + '분 뒤에 다시 해 주세요.');
+      if (hashPin_(pin, String(r[2])) !== String(r[1])) {
+        const fails = (Number(r[3]) || 0) + 1;
+        const lockUntil = fails >= MAX_FAILS ? Date.now() + LOCK_MINUTES * 60000 : '';
+        sh.getRange(i + 2, 4, 1, 2).setValues([[String(fails >= MAX_FAILS ? 0 : fails), String(lockUntil)]]);
+        return fail_(fails >= MAX_FAILS ? 'PIN을 ' + MAX_FAILS + '번 틀려 ' + LOCK_MINUTES + '분 동안 잠겼어요.' : 'PIN이 맞지 않아요. (' + fails + '/' + MAX_FAILS + ') 잊었으면 담당 선생님께 말해 주세요.');
+      }
+      if (Number(r[3])) sh.getRange(i + 2, 4, 1, 2).setValues([['0', '']]);
+    }
+  } finally {
+    lock.releaseLock();
+  }
+  const token = Utilities.getUuid() + Utilities.getUuid().replace(/-/g, '');
+  CacheService.getScriptCache().put('ch:' + token, phone, SESSION_SECONDS);
+  return { ok: true, token: token, phone: chPhoneText_(phone), entries: chMine_(phone), info: apiChInfo() };
+}
+
+function apiChList(token) {
+  const phone = chSession_(token);
+  if (!phone) return expired_();
+  return { ok: true, phone: chPhoneText_(phone), entries: chMine_(phone), info: apiChInfo() };
+}
+
+function chPerson_(p, label) {
+  p = p || {};
+  const o = { dept: String(p.dept || '').trim().slice(0, 20), grade: String(p.grade || '').replace(/\D/g, ''), cls: String(p.cls || '').replace(/\D/g, ''),
+    num: String(p.num || '').replace(/\D/g, ''), name: String(p.name || '').trim().slice(0, 20) };
+  if (!o.dept || !o.grade || !o.cls || !o.num || !o.name) return { error: label + '의 학과·학년·반·번호·이름을 모두 적어 주세요.' };
+  if (!/^[1-3]$/.test(o.grade) || Number(o.cls) < 1 || Number(o.cls) > 30 || Number(o.num) < 1 || Number(o.num) > 60) return { error: label + '의 학년·반·번호를 다시 확인해 주세요.' };
+  return { p: o };
+}
+function chTeamText_(team) { return team.map(function (m) { return m.dept + ' ' + m.grade + '-' + m.cls + '-' + m.num + ' ' + m.name; }).join(', '); }
+function chDurOk_(kind, d) {
+  if (!d) return '';
+  if (kind === '숏폼' && d > 60.9) return '숏폼은 1분 이내여야 해요. (지금 ' + Math.round(d) + '초)';
+  if (kind === '롱폼' && (d < 180 || d >= 600)) return '롱폼은 3분 이상 10분 미만이어야 해요. (지금 ' + Math.floor(d / 60) + '분 ' + Math.round(d % 60) + '초)';
+  return '';
+}
+function chYoutube_(u) {
+  u = String(u || '').trim();
+  if (!u) return '';
+  return /^https:\/\/(www\.|m\.)?(youtube\.com\/(watch\?v=|shorts\/|live\/)|youtu\.be\/)[A-Za-z0-9_\-]{6,}/.test(u) ? u.slice(0, 200) : null;
+}
+
+/** 작품 저장 (새로 / 고치기). 파일은 따로 올린다. */
+function apiChSave(token, d) {
+  const phone = chSession_(token);
+  if (!phone) return expired_();
+  const st = chSettings_();
+  if (!st.open) return fail_(chClosedMsg_(st));
+  d = d || {};
+  const kind = CH_KINDS.indexOf(d.kind) >= 0 ? d.kind : '';
+  if (!kind) return fail_('참여 부문(숏폼/롱폼)을 골라 주세요.');
+  const type = d.type === '팀' ? '팀' : '개인';
+  const title = String(d.title || '').trim().slice(0, 60);
+  if (!title) return fail_('작품 제목을 적어 주세요.');
+  const L = chPerson_(d.leader, '대표자');
+  if (L.error) return fail_(L.error);
+  const team = [];
+  if (type === '팀') {
+    const list = Array.isArray(d.team) ? d.team : [];
+    if (!list.length) return fail_('팀이면 팀원을 한 명 이상 적어 주세요. 혼자면 "개인"을 골라 주세요.');
+    for (let i = 0; i < list.length && i < 50; i++) { const m = chPerson_(list[i], '팀원 ' + (i + 1)); if (m.error) return fail_(m.error); team.push(m.p); }
+  }
+  const link = chYoutube_(d.link);
+  if (link === null) return fail_('유튜브 링크가 아닌 것 같아요. youtube.com 또는 youtu.be 주소를 붙여 넣어 주세요.');
+  if (!d.agreePrivacy || !d.agreeRights) return fail_('아래 두 가지 동의에 체크해 주세요.');
+  const desc = String(d.desc || '').trim().slice(0, 1500), tools = String(d.tools || '').trim().slice(0, 300);
+  const lp = L.p;
+  const lock = LockService.getScriptLock();
+  lock.waitLock(25000);
+  let no;
+  try {
+    const t = chRows_(), sh = t.sh;
+    const now = new Date();
+    if (d.no) {
+      const i = chFind_(t.rows, d.no);
+      if (i < 0 || String(t.rows[i][CH.PHONE]) !== phone || t.rows[i][CH.STATE] === '취소') return fail_('작품을 찾을 수 없어요. 새로고침해 주세요.');
+      const r = t.rows[i];
+      no = String(r[CH.NO]);
+      const durBad = chDurOk_(kind, Number(r[CH.DUR]) || 0);
+      if (durBad && chFiles_(r).video) return fail_(durBad + ' 부문을 바꾸려면 영상을 다시 올려 주세요.');
+      const changedName = r[CH.KIND] !== kind || r[CH.TITLE] !== title || r[CH.NAME] !== lp.name;
+      r[CH.KIND] = kind; r[CH.TYPE] = type; r[CH.TITLE] = title; r[CH.DESC] = desc; r[CH.TOOLS] = tools;
+      r[CH.DEPT] = lp.dept; r[CH.GRADE] = lp.grade; r[CH.CLS] = lp.cls; r[CH.NUM] = lp.num; r[CH.NAME] = lp.name;
+      r[CH.TEAM] = chTeamText_(team); r[CH.TEAMJ] = JSON.stringify(team); r[CH.LINK] = link; r[CH.MAT] = now;
+      if (changedName) chRename_(r);
+      chStamp_(r);
+      sh.getRange(i + 2, 1, 1, CH_HEADERS.length).setValues([r]);
+    } else {
+      const p = PropertiesService.getScriptProperties();
+      const seq = (Number(p.getProperty('CH_SEQ')) || 0) + 1;
+      p.setProperty('CH_SEQ', String(seq));
+      no = (seq < 100 ? ('00' + seq).slice(-3) : String(seq));
+      const folder = childFolder_(childFolder_(chRoot_(), kind), chFolderName_(no, lp.name, title));
+      const r = [no, kind, type, title, desc, tools, lp.dept, lp.grade, lp.cls, lp.num, lp.name, phone, chTeamText_(team), '', '', link, '', folder.getId(), '', now, now, JSON.stringify(team), JSON.stringify({ ev: [] })];
+      chStamp_(r);
+      const row = freeRow_(sh, 1);
+      sh.getRange(row, 1, 1, 1).setNumberFormat('@');
+      sh.getRange(row, CH.PHONE + 1, 1, 1).setNumberFormat('@');
+      sh.getRange(row, 1, 1, CH_HEADERS.length).setValues([r]);
+    }
+  } finally {
+    lock.releaseLock();
+  }
+  log_('', lp.name, '챌린지 ' + (d.no ? '수정' : '접수'), no + ' ' + kind + ' ' + title);
+  return { ok: true, no: no, entries: chMine_(phone) };
+}
+/** 사람이 읽는 칸(영상·증거·상태)을 파일 데이터에 맞춰 다시 쓴다 */
+function chStamp_(r) {
+  const f = chFiles_(r);
+  r[CH.VIDEO] = f.video ? f.video.n : '';
+  r[CH.EV] = f.ev.map(function (x) { return x.n; }).join('\n');
+  if (r[CH.STATE] !== '취소') r[CH.STATE] = f.video || r[CH.LINK] ? '제출' : '영상 없음';
+}
+/** 부문·제목·이름이 바뀌면 폴더와 파일 이름도 따라 바꾼다 */
+function chRename_(r) {
+  try {
+    const folder = DriveApp.getFolderById(String(r[CH.FOLDER]));
+    folder.setName(chFolderName_(r[CH.NO], r[CH.NAME], r[CH.TITLE]));
+    try { folder.moveTo(childFolder_(chRoot_(), r[CH.KIND])); } catch (e) {}
+  } catch (e) {}
+  const f = chFiles_(r), base = chBase_(r);
+  if (f.video) { f.video.n = base + chExt_(f.video.n); try { DriveApp.getFileById(f.video.id).setName(f.video.n); } catch (e) {} }
+  f.ev.forEach(function (x, i) { x.n = base + '_AI증거' + (i + 1) + chExt_(x.n); try { DriveApp.getFileById(x.id).setName(x.n); } catch (e) {} });
+  r[CH.FILESJ] = JSON.stringify(f);
+}
+
+/** 파일 올리기 1단계: 드라이브 업로드 주소를 만들어 준다 (브라우저가 그 주소로 파일을 바로 보낸다). */
+function apiChUploadStart(token, no, role, name, mime, size, origin) {
+  const phone = chSession_(token);
+  if (!phone) return expired_();
+  const st = chSettings_();
+  if (!st.open) return fail_(chClosedMsg_(st));
+  role = role === 'video' ? 'video' : 'ev';
+  size = Number(size) || 0;
+  mime = String(mime || 'application/octet-stream').slice(0, 100);
+  origin = String(origin || '');
+  if (!CH_ORIGINS.test(origin)) origin = 'https://total-page.pages.dev';
+  if (role === 'video' && !/^video\//.test(mime) && !/\.(mp4|mov|m4v|webm|avi|mkv)$/i.test(String(name))) return fail_('영상 파일만 올릴 수 있어요.');
+  if (size <= 0) return fail_('빈 파일이에요.');
+  if (role === 'video' && size > CH_VIDEO_MAX) return fail_('영상이 너무 커요. 2GB까지 올릴 수 있어요.');
+  if (role === 'ev' && size > CH_EV_SIZE_MAX) return fail_('증거 파일 하나는 200MB까지예요.');
+  const t = chRows_(), i = chFind_(t.rows, no);
+  if (i < 0 || String(t.rows[i][CH.PHONE]) !== phone || t.rows[i][CH.STATE] === '취소') return fail_('작품을 찾을 수 없어요. 새로고침해 주세요.');
+  const r = t.rows[i], f = chFiles_(r);
+  if (role === 'ev' && f.ev.length >= CH_EV_MAX) return fail_('AI 증거 파일은 ' + CH_EV_MAX + '개까지예요. 하나를 빼고 올려 주세요.');
+  const base = chBase_(r);
+  const fname = role === 'video' ? base + chExt_(name) : base + '_AI증거' + (f.ev.length + 1) + chExt_(name);
+  const res = UrlFetchApp.fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,name,size', {
+    method: 'post', contentType: 'application/json; charset=UTF-8', muteHttpExceptions: true,
+    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken(), 'X-Upload-Content-Type': mime, 'X-Upload-Content-Length': String(size), Origin: origin },
+    payload: JSON.stringify({ name: fname, parents: [String(r[CH.FOLDER])], mimeType: mime })
+  });
+  const code = res.getResponseCode();
+  const h = res.getAllHeaders ? res.getAllHeaders() : res.getHeaders();
+  const url = h.Location || h.location;
+  if (code !== 200 || !url) { try { diagRow_('챌린지 업로드 주소 실패', code + ' ' + String(res.getContentText()).slice(0, 300)); } catch (e) {} return fail_('업로드를 시작하지 못했어요. 잠시 뒤 다시 해 주세요.'); }
+  return { ok: true, url: String(url), name: fname };
+}
+
+/** 파일 올리기 2단계: 다 올라간 파일을 작품에 붙인다. 영상은 하나만 (새로 올리면 앞의 것은 휴지통). */
+function apiChUploadDone(token, no, role, fileId, dur, name) {
+  const phone = chSession_(token);
+  if (!phone) return expired_();
+  role = role === 'video' ? 'video' : 'ev';
+  fileId = String(fileId || '');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(25000);
+  try {
+    const t = chRows_(), i = chFind_(t.rows, no);
+    if (i < 0 || String(t.rows[i][CH.PHONE]) !== phone) return fail_('작품을 찾을 수 없어요.');
+    const r = t.rows[i], f = chFiles_(r);
+    let file = null;
+    if (fileId) { try { file = DriveApp.getFileById(fileId); } catch (e) {} }
+    else if (name) { // 브라우저가 업로드 응답을 못 읽은 경우: 폴더에서 그 이름의 가장 최근 파일을 찾는다
+      try {
+        const it = DriveApp.getFolderById(String(r[CH.FOLDER])).getFilesByName(String(name));
+        while (it.hasNext()) { const x = it.next(); if (!file || x.getDateCreated() > file.getDateCreated()) file = x; }
+      } catch (e) {}
+      if (file) fileId = file.getId();
+    }
+    if (!file) return fail_('올린 파일을 찾지 못했어요. 다시 올려 주세요.');
+    let inFolder = false;
+    try { const ps = file.getParents(); while (ps.hasNext()) if (ps.next().getId() === String(r[CH.FOLDER])) inFolder = true; } catch (e) {}
+    if (!inFolder) return fail_('올린 파일을 확인하지 못했어요. 다시 올려 주세요.');
+    const item = { id: fileId, n: file.getName(), s: file.getSize() };
+    if (role === 'video') {
+      const bad = chDurOk_(String(r[CH.KIND]), Number(dur) || 0);
+      if (bad) { try { file.setTrashed(true); } catch (e) {} return fail_(bad); }
+      if (f.video && f.video.id !== fileId) { try { DriveApp.getFileById(f.video.id).setTrashed(true); } catch (e) {} }
+      f.video = item;
+      dur = Math.round((Number(dur) || 0) * 10) / 10;
+      r[CH.DUR] = dur || '';
+    } else {
+      if (!f.ev.some(function (x) { return x.id === fileId; })) f.ev.push(item);
+    }
+    r[CH.FILESJ] = JSON.stringify(f);
+    r[CH.MAT] = new Date();
+    chStamp_(r);
+    t.sh.getRange(i + 2, 1, 1, CH_HEADERS.length).setValues([r]);
+  } finally {
+    lock.releaseLock();
+  }
+  return { ok: true, entries: chMine_(phone) };
+}
+
+/** 파일 빼기 (영상 또는 증거) */
+function apiChRemoveFile(token, no, fileId) {
+  const phone = chSession_(token);
+  if (!phone) return expired_();
+  const st = chSettings_();
+  if (!st.open) return fail_(chClosedMsg_(st));
+  const lock = LockService.getScriptLock();
+  lock.waitLock(25000);
+  try {
+    const t = chRows_(), i = chFind_(t.rows, no);
+    if (i < 0 || String(t.rows[i][CH.PHONE]) !== phone) return fail_('작품을 찾을 수 없어요.');
+    const r = t.rows[i], f = chFiles_(r);
+    if (f.video && f.video.id === fileId) { f.video = null; r[CH.DUR] = ''; }
+    else f.ev = f.ev.filter(function (x) { return x.id !== fileId; });
+    try { DriveApp.getFileById(String(fileId)).setTrashed(true); } catch (e) {}
+    r[CH.FILESJ] = JSON.stringify(f);
+    chRename_(r); // 증거 번호를 1부터 다시 맞춘다
+    r[CH.MAT] = new Date();
+    chStamp_(r);
+    t.sh.getRange(i + 2, 1, 1, CH_HEADERS.length).setValues([r]);
+  } finally {
+    lock.releaseLock();
+  }
+  return { ok: true, entries: chMine_(phone) };
+}
+
+/** 접수 취소: 기록은 '취소'로 남기고 폴더는 휴지통으로 */
+function apiChCancel(token, no) {
+  const phone = chSession_(token);
+  if (!phone) return expired_();
+  const st = chSettings_();
+  if (!st.open) return fail_(chClosedMsg_(st));
+  const t = chRows_(), i = chFind_(t.rows, no);
+  if (i < 0 || String(t.rows[i][CH.PHONE]) !== phone) return fail_('작품을 찾을 수 없어요.');
+  const r = t.rows[i];
+  r[CH.STATE] = '취소'; r[CH.MAT] = new Date();
+  try { DriveApp.getFolderById(String(r[CH.FOLDER])).setTrashed(true); } catch (e) {}
+  t.sh.getRange(i + 2, 1, 1, CH_HEADERS.length).setValues([r]);
+  log_('', String(r[CH.NAME]), '챌린지 취소', no);
+  return { ok: true, entries: chMine_(phone) };
+}
+
+/* ── 선생님 ── */
+function apiTeacherCh(token) {
+  if (!isTeacher_(token)) return expired_();
+  const st = chSettings_();
+  const root = chRoot_();
+  const kinds = {};
+  CH_KINDS.forEach(function (k) { kinds[k] = childFolder_(root, k).getUrl(); });
+  const rows = chRows_().rows.filter(function (r) { return String(r[CH.NO]); }).map(function (r) { return chView_(r, true); });
+  return { ok: true, settings: st, entries: rows, rootUrl: root.getUrl(), kindUrls: kinds,
+    sheetUrl: SpreadsheetApp.getActiveSpreadsheet().getUrl() + '#gid=' + sheet_(SHEET.CH).getSheetId() };
+}
+function apiTeacherChSet(token, d) {
+  if (!isTeacher_(token)) return expired_();
+  d = d || {};
+  const p = PropertiesService.getScriptProperties();
+  if (typeof d.on === 'boolean') p.setProperty('CH_OPEN', d.on ? '1' : '0');
+  if (d.deadline !== undefined) p.setProperty('CH_DEADLINE', String(Number(d.deadline) || 0));
+  return apiTeacherCh(token);
+}
+function apiTeacherChResetPin(token, phone) {
+  if (!isTeacher_(token)) return expired_();
+  phone = chPhone_(phone);
+  const sh = sheet_(SHEET.CHPIN), rows = read_(sh, CHPIN_HEADERS.length);
+  for (let i = rows.length - 1; i >= 0; i--) if (String(rows[i][0]).replace(/\D/g, '') === phone) { sh.deleteRow(i + 2); log_('', '교사', '챌린지 PIN 초기화', phone.slice(-4)); return { ok: true }; }
+  return fail_('그 번호로 정한 PIN이 없어요.');
 }
