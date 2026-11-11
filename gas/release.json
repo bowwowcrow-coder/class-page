@@ -1,10 +1,10 @@
 {
-  "version": "20261112.0817",
-  "note": "AI 크리에이터 챌린지 작품 접수 창구",
+  "version": "20261112.0831",
+  "note": "챌린지 담당 선생님 안내",
   "files": [
     {
       "name": "Code.gs",
-      "sha256": "a6de6e40899be6fe5e1fed0cbe0302ce120ab769927fc656d1f817d370a7612b"
+      "sha256": "88a93db5888aa73a046f91c3fba747f67c65feb45257fbcf2e67df135cea583f"
     },
     {
       "name": "Demo.gs",

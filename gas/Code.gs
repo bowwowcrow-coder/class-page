@@ -3765,7 +3765,7 @@ function apiChEnter(phone, pin, isNew) {
         const fails = (Number(r[3]) || 0) + 1;
         const lockUntil = fails >= MAX_FAILS ? Date.now() + LOCK_MINUTES * 60000 : '';
         sh.getRange(i + 2, 4, 1, 2).setValues([[String(fails >= MAX_FAILS ? 0 : fails), String(lockUntil)]]);
-        return fail_(fails >= MAX_FAILS ? 'PIN을 ' + MAX_FAILS + '번 틀려 ' + LOCK_MINUTES + '분 동안 잠겼어요.' : 'PIN이 맞지 않아요. (' + fails + '/' + MAX_FAILS + ') 잊었으면 담당 선생님께 말해 주세요.');
+        return fail_(fails >= MAX_FAILS ? 'PIN을 ' + MAX_FAILS + '번 틀려 ' + LOCK_MINUTES + '분 동안 잠겼어요.' : 'PIN이 맞지 않아요. (' + fails + '/' + MAX_FAILS + ') 잊었으면 2층 과학실 앞 미래교육부 조김준환 선생님께 말해 주세요.');
       }
       if (Number(r[3])) sh.getRange(i + 2, 4, 1, 2).setValues([['0', '']]);
     }

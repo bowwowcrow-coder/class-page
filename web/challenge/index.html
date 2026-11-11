@@ -90,6 +90,8 @@
   .spin { width: 28px; height: 28px; margin: 40px auto; border: 3px solid var(--fill); border-top-color: var(--accent); border-radius: 50%; animation: sp 0.8s linear infinite; }
   @keyframes sp { to { transform: rotate(360deg); } }
   [hidden] { display: none !important; }
+  .contact { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--sub); font-size: 13px; text-align: center; }
+  .contact span { display: block; font-weight: 600; margin-bottom: 2px; }
   .embed .wrap { padding-top: 14px; }
   .embed header .eyebrow { display: none; }
   .done { text-align: center; padding: 10px 0; }
@@ -105,6 +107,7 @@
     <span class="pill" id="status">불러오는 중</span>
   </header>
   <main id="app"><div class="spin"></div></main>
+  <footer class="contact"><span>담당 선생님</span>2층 과학실 앞 미래교육부 조김준환 선생님</footer>
 </div>
 <script>
 (function () {
@@ -168,7 +171,7 @@
     var msg = el('p', 'msg', '');
     var go = btn('btn', '들어가기', submit);
     c.appendChild(go); c.appendChild(msg);
-    c.appendChild(el('p', 'hint', 'PIN을 잊으면 담당 선생님께 말해 주세요. 초기화해 드려요.'));
+    c.appendChild(el('p', 'hint', 'PIN을 잊으면 2층 과학실 앞 미래교육부 조김준환 선생님께 말해 주세요. 초기화해 드려요.'));
     app.appendChild(c);
     [phone, pin, pin2].forEach(function (i) { i.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); }); });
     function paint() {
@@ -264,7 +267,7 @@
     }
     var leader = personBox(d.leader); c2.appendChild(leader);
     var ph = input('tel', S.phone); ph.readOnly = true;
-    var fph = field('대표자 전화번호', ph, false, '들어올 때 쓴 번호예요. 담당 선생님 연락용이에요.'); fph.style.marginTop = '12px';
+    var fph = field('대표자 전화번호', ph, false, '들어올 때 쓴 번호예요. 담당 선생님이 연락할 때 써요.'); fph.style.marginTop = '12px';
     c2.appendChild(fph);
     app.appendChild(c2);
 
