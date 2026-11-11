@@ -32,6 +32,87 @@
 </head>
 <body>
 <div class="splash" id="splash"><img src="/icon-192.png" alt=""><div class="spin" role="status" aria-label="불러오는 중"></div></div>
-<script src="/boot.js"></script>
+<script>
+/* 대회 접수 기간이면: 위쪽 전환 버튼 + 앞면(챌린지 제출) / 뒷면(수업 페이지) 카드 뒤집기.
+   기간이 아니면 예전처럼 수업 페이지를 바로 띄운다. 기간 여부는 10분 동안 기억해서 매번 기다리지 않게 한다. */
+(function () {
+  var API = 'https://script.google.com/macros/s/AKfycbyw6oiaICnnbyw2l0xVsVCJ0VBI1lz4mQM3N9BpNOs7p0edgAV9dcWNKQxMNTMhIdVykw/exec';
+  if (window.CH_API) API = window.CH_API;
+  var KEY = 'ch_state', now = Date.now(), st = null;
+  try { st = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
+  function openNow(x) { return !!(x && x.open && (!x.deadline || Date.now() < x.deadline)); }
+  function check() {
+    var ctl = window.AbortController ? new AbortController() : null;
+    var t = setTimeout(function () { if (ctl) ctl.abort(); }, 4000);
+    return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: 'apiChInfo', args: [] }), signal: ctl ? ctl.signal : undefined })
+      .then(function (r) { return r.json(); }).then(function (r) {
+        clearTimeout(t);
+        var x = { open: !!(r.v && r.v.open), deadline: (r.v && r.v.deadline) || 0, at: Date.now() };
+        try { localStorage.setItem(KEY, JSON.stringify(x)); } catch (e) {}
+        return x;
+      });
+  }
+  function boot() { var s = document.createElement('script'); s.src = '/boot.js'; document.body.appendChild(s); }
+  function flip() {
+    document.title = 'AI 크리에이터 챌린지 · 수업 페이지';
+    var css = document.createElement('style');
+    css.textContent =
+      'html,body{height:100%;overflow:hidden}' +
+      '.fbar{position:fixed;left:0;right:0;top:0;height:52px;display:flex;align-items:center;justify-content:center;padding:0 16px;padding-top:env(safe-area-inset-top);box-sizing:content-box;background:inherit;z-index:2}' +
+      '.fseg{display:flex;gap:2px;padding:2px;border-radius:999px;background:rgba(118,118,128,.14)}' +
+      '.fseg button{height:36px;padding:0 16px;border:0;border-radius:999px;background:none;color:inherit;font:inherit;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap}' +
+      '.fseg button[aria-pressed=true]{background:#fff;color:#1d1d1f;font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.15)}' +
+      '@media (prefers-color-scheme:dark){.fseg button[aria-pressed=true]{background:#636366;color:#fff}}' +
+      '.fstage{position:fixed;left:0;right:0;bottom:0;top:calc(52px + env(safe-area-inset-top));perspective:1800px}' +
+      '.fcard{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .7s cubic-bezier(.3,.1,.2,1)}' +
+      '.fcard.back{transform:rotateY(180deg)}' +
+      '.fface{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;background:inherit}' +
+      '.fface.b{transform:rotateY(180deg)}' +
+      '.fface iframe{width:100%;height:100%;border:0;display:block;background:transparent}';
+    document.head.appendChild(css);
+    document.body.innerHTML = '';
+    var bar = document.createElement('div'); bar.className = 'fbar';
+    var seg = document.createElement('div'); seg.className = 'fseg';
+    var b1 = document.createElement('button'), b2 = document.createElement('button');
+    b1.type = b2.type = 'button'; b1.textContent = 'AI 챌린지 제출'; b2.textContent = '수업 페이지';
+    seg.appendChild(b1); seg.appendChild(b2); bar.appendChild(seg);
+    var stage = document.createElement('div'); stage.className = 'fstage';
+    var card = document.createElement('div'); card.className = 'fcard';
+    var fa = document.createElement('div'); fa.className = 'fface a';
+    var fb = document.createElement('div'); fb.className = 'fface b';
+    var ia = document.createElement('iframe'); ia.title = 'AI 크리에이터 챌린지 제출'; ia.src = '/challenge/?embed=1';
+    var ib = document.createElement('iframe'); ib.title = '수업 페이지';
+    fa.appendChild(ia); fb.appendChild(ib);
+    card.appendChild(fa); card.appendChild(fb); stage.appendChild(card);
+    document.body.appendChild(bar); document.body.appendChild(stage);
+    var face = 'a';
+    try { face = sessionStorage.getItem('flip_face') || 'a'; } catch (e) {}
+    function loadB() { if (!ib.src) ib.src = '/class/'; }
+    function show(f, anim) {
+      face = f;
+      try { sessionStorage.setItem('flip_face', f); } catch (e) {}
+      if (f === 'b') loadB();
+      if (!anim) card.style.transition = 'none';
+      card.classList.toggle('back', f === 'b');
+      fa.style.visibility = fb.style.visibility = 'visible';
+      if (!anim) { card.offsetWidth; card.style.transition = ''; }
+      clearTimeout(show.t);
+      show.t = setTimeout(function () { (f === 'b' ? fa : fb).style.visibility = 'hidden'; }, anim ? 720 : 0); // 뒤에 숨은 면은 눌리지 않게
+      b1.setAttribute('aria-pressed', f === 'a'); b2.setAttribute('aria-pressed', f === 'b');
+    }
+    b1.onclick = function () { if (face !== 'a') show('a', true); };
+    b2.onclick = function () { if (face !== 'b') show('b', true); };
+    show(face, false);
+    setTimeout(loadB, 1500); // 뒷면(수업 페이지)도 미리 불러 둔다
+  }
+  var fresh = st && now - st.at < 10 * 60000;
+  if (fresh) {
+    openNow(st) ? flip() : boot();
+    check().catch(function () {}); // 다음번을 위해 뒤에서 새로 확인
+  } else {
+    check().then(function (x) { openNow(x) ? flip() : boot(); }, function () { st && openNow(st) ? flip() : boot(); });
+  }
+})();
+</script>
 </body>
 </html>

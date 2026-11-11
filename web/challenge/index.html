@@ -90,11 +90,14 @@
   .spin { width: 28px; height: 28px; margin: 40px auto; border: 3px solid var(--fill); border-top-color: var(--accent); border-radius: 50%; animation: sp 0.8s linear infinite; }
   @keyframes sp { to { transform: rotate(360deg); } }
   [hidden] { display: none !important; }
+  .embed .wrap { padding-top: 14px; }
+  .embed header .eyebrow { display: none; }
   .done { text-align: center; padding: 10px 0; }
   .done .big { font-size: 44px; line-height: 1; margin-bottom: 8px; color: var(--green); }
 </style>
 </head>
 <body>
+<script>if (/[?&]embed\b/.test(location.search)) document.documentElement.classList.add('embed');</script>
 <div class="wrap">
   <header>
     <div class="eyebrow">인천디자인고등학교</div>
