@@ -107,7 +107,7 @@
 (function () {
   var API = 'https://script.google.com/macros/s/AKfycbyw6oiaICnnbyw2l0xVsVCJ0VBI1lz4mQM3N9BpNOs7p0edgAV9dcWNKQxMNTMhIdVykw/exec';
   if (window.CH_API) API = window.CH_API; // 테스트용
-  var DEPTS = ['건축디자인과', '제품디자인과', '패션디자인과', '시각디자인과', '도자디자인과'];
+  var DEPTS = ['건축', '제품', '패션', '시각', '도예'];
   var KINDS = { '숏폼': '1분 이내', '롱폼': '3분 이상 10분 미만' };
   var EV_MAX = 5, MB = 1024 * 1024;
   var app = document.getElementById('app');
@@ -244,10 +244,11 @@
 
     // 대표자
     var c2 = el('section', 'card'); c2.appendChild(el('h2', '', '대표자'));
-    var dl = el('datalist'); dl.id = 'depts'; DEPTS.forEach(function (x) { var o = el('option'); o.value = x; dl.appendChild(o); }); c2.appendChild(dl);
     function personBox(p) {
       var box = el('div', 'person');
-      var dept = input('text', p.dept, '학과'); dept.setAttribute('list', 'depts');
+      var dept = el('select'); [''].concat(DEPTS).forEach(function (x) { var o = el('option', '', x || '학과'); o.value = x; dept.appendChild(o); });
+      if (p.dept && DEPTS.indexOf(p.dept) < 0) { var o2 = el('option', '', p.dept); o2.value = p.dept; dept.appendChild(o2); }
+      dept.value = p.dept || '';
       var g = el('select'); [['', '학년'], ['1', '1학년'], ['2', '2학년'], ['3', '3학년']].forEach(function (o) { var x = el('option', '', o[1]); x.value = o[0]; g.appendChild(x); }); g.value = p.grade || '';
       var cl = input('number', p.cls, '반'); cl.inputMode = 'numeric'; cl.min = 1; cl.max = 30;
       var nu = input('number', p.num, '번호'); nu.inputMode = 'numeric'; nu.min = 1; nu.max = 60;
