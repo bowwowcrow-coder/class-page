@@ -1,10 +1,10 @@
 {
-  "version": "20261112.0831",
-  "note": "챌린지 담당 선생님 안내",
+  "version": "20261112.1611",
+  "note": "현장실습 학생 채점 기준",
   "files": [
     {
       "name": "Code.gs",
-      "sha256": "88a93db5888aa73a046f91c3fba747f67c65feb45257fbcf2e67df135cea583f"
+      "sha256": "46cbfa54783f98ae24f977a4164baf164d3cf89dff1b06be841e83245fe4452d"
     },
     {
       "name": "Demo.gs",
@@ -12,7 +12,7 @@
     },
     {
       "name": "Index.html",
-      "sha256": "be71509b86303a7e739daba7e4bfdbabab18b51a967932f2396dddaf3faf2f8c"
+      "sha256": "b0f74e0c4f5ffa10498301cb3272ecff9578400a59f0f66922535aefc833666f"
     },
     {
       "name": "Setup.html",

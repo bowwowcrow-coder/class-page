@@ -347,6 +347,11 @@
   .ch-line { display: flex; gap: 12px; }
   .ch-line .k { flex: none; width: 72px; color: var(--sub); }
   .ch-line .v { flex: 1; min-width: 0; white-space: pre-line; word-break: break-all; }
+  .fieldgrade { margin-bottom: 6px; }
+  .fg-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .fg-row input { width: 130px; min-height: 44px; padding: 8px 12px; border: 0; border-radius: 10px; background: var(--fill); color: var(--ink); font: inherit; font-size: 17px; }
+  .fg-row .mini { margin-top: 0; height: 40px; }
+  .fg-prev { min-width: 60px; font-weight: 700; color: var(--accent); }
   .sum-acts { display: flex; gap: 16px; flex-wrap: wrap; justify-content: flex-end; }
   .copy-head { display: flex; justify-content: space-between; align-items: baseline; margin: 4px 0 6px; }
   .copy-head .link { width: auto; margin: 0; padding: 4px 0; }
@@ -2322,12 +2327,17 @@
     var scaleField = field('배점 (등급:점수를 쉼표로)', scale);
     scaleField.hidden = !(t && t.graded);
     var toggles = el('div', 'list toggles');
-    var graded = toggleRow('평가', '켜면 채점하고 평가표에 나옵니다.', !!(t && t.graded), function (on) { scaleField.hidden = !on; });
+    var fieldBox = textBox(t && t.field ? t.field : '', 300, '예: 100:70, 95:63, 90:56, 85:49, 80:42, 70:35, 60:27, 미제출:10');
+    var fieldField = field('현장실습 배점 (선택) — 평가서 총점 이상:점수', fieldBox);
+    fieldField.appendChild(el('p', 'hint', '현장실습 학생은 현장실습평가서 총점을 넣으면 이 표대로 점수가 들어갑니다. 가장 낮은 구간보다 낮으면 그 구간 점수(기본 점수)입니다.'));
+    fieldField.hidden = !(t && t.graded);
+    var graded = toggleRow('평가', '켜면 채점하고 평가표에 나옵니다.', !!(t && t.graded), function (on) { scaleField.hidden = !on; fieldField.hidden = !on; });
     var published = toggleRow('게시', '끄면 학생에게 보이지 않습니다.', t ? t.published : true);
     toggles.appendChild(graded);
     toggles.appendChild(published);
     wrap.appendChild(toggles);
     wrap.appendChild(scaleField);
+    wrap.appendChild(fieldField);
 
     // 제출 형식: 받을 형식을 체크하면 그 형식의 칸이 생긴다 (여러 개를 함께 고를 수 있다)
     wrap.appendChild(el('h4', 'sec', '제출 형식'));
@@ -2401,7 +2411,7 @@
       call('apiTeacherSaveTask', ttoken, tCourse, {
         id: t ? t.id : '', title: title.value, desc: desc.value,
         dueAt: new Date(due.value).getTime(), finAt: fin.value ? new Date(fin.value).getTime() : 0,
-        graded: graded.isOn(), scale: scale.value, published: published.isOn(),
+        graded: graded.isOn(), scale: scale.value, field: fieldBox.value, published: published.isOn(),
         checks: checks.value.split(/[,，\n]/).map(function (x) { return x.trim(); }).filter(Boolean),
         // 학생 화면에 글 → 이미지 → 문서 → 파일 순서로 나오게 정리 (제출이 있는 과제는 순서를 건드리지 않는다)
         slots: locked ? slots : slots.slice().sort(function (a, b) { var at = function (s) { for (var i = 0; i < SLOT_KINDS.length; i++) if (SLOT_KINDS[i][0] === s.kind) return i; return 9; }; return at(a) - at(b); })
@@ -4663,6 +4673,7 @@
           grades.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.mark === g.mark ? 'true' : 'false'); });
           clear.hidden = !g.mark;
           info.textContent = !g.mark ? '아직 채점하지 않았습니다.'
+            : /^현장/.test(g.mark) ? g.mark.replace('현장 ', '현장실습평가서 ') + (/미제출/.test(g.mark) ? '' : '점') + ' → ' + g.points + '점 · ' + g.gradedAt + ' 채점'
             : stale ? '채점한 뒤에 학생이 다시 제출했습니다. 확인하고 등급을 다시 눌러 주세요.'
             : g.gradedAt + ' 채점' + (g.confirmedAt ? ', 학생 확인 ' + g.confirmedAt : (task.scoresOpen ? ', 학생 확인 전' : ', 점수 비공개 상태'));
         };
@@ -4684,6 +4695,38 @@
           b.appendChild(el('small', '', x.p + '점'));
           grades.appendChild(b);
         });
+        // 현장실습 학생: 현장실습평가서 총점을 넣으면 과제의 현장실습 배점표대로 점수가 들어간다
+        var isField = task.field && /현장실습/.test(s.note || '');
+        if (isField) {
+          var fb = el('div', 'fieldgrade');
+          fb.appendChild(el('p', 'hint', '현장실습 학생이라 현장실습평가서 총점으로 채점합니다. (' + task.field + ')'));
+          var fr = el('div', 'fg-row');
+          var tot = el('input'); tot.type = 'number'; tot.inputMode = 'decimal'; tot.min = 0; tot.max = 100; tot.step = 'any'; tot.placeholder = '평가서 총점';
+          var m0 = /^현장 (\d+(\.\d+)?)$/.exec(g.mark || ''); if (m0) tot.value = m0[1];
+          var prev = el('span', 'fg-prev', '');
+          var bands = task.field.split(',').map(function (x) { var m = x.trim().split(':'); return { k: m[0].trim(), p: Number(m[1]) }; });
+          var calc = function () {
+            var v = tot.value === '' ? NaN : Number(tot.value);
+            if (!isFinite(v)) { prev.textContent = ''; return; }
+            var nums = bands.filter(function (b) { return /^\d/.test(b.k); }).sort(function (a, b) { return Number(b.k) - Number(a.k); });
+            var p = nums.length ? nums[nums.length - 1].p : 0;
+            for (var i = 0; i < nums.length; i++) if (v >= Number(nums[i].k)) { p = nums[i].p; break; }
+            prev.textContent = '→ ' + p + '점';
+          };
+          tot.addEventListener('input', calc);
+          tot.addEventListener('keydown', function (e) { if (e.key === 'Enter') setMark('현장 ' + tot.value); });
+          fr.appendChild(tot); fr.appendChild(prev);
+          fr.appendChild(button('mini', '저장', function () { if (tot.value !== '') setMark('현장 ' + tot.value); }));
+          var nb = button('mini', '평가서 미제출', function () { setMark('현장 미제출'); });
+          fr.appendChild(nb);
+          fb.appendChild(fr);
+          body.appendChild(fb);
+          calc();
+          grades.hidden = true;
+          var other = button('link', '일반 기준(등급)으로 채점하기', function () { grades.hidden = !grades.hidden; });
+          other.style.margin = '0 0 4px';
+          body.appendChild(other);
+        }
         body.appendChild(grades);
         body.appendChild(info);
         body.appendChild(clear);

@@ -25,7 +25,7 @@ const CFG_HELP = {
 };
 // 설정 도우미가 생기기 전부터 쓰던 시트는 예전에 보이던 그대로 이어 간다
 const LEGACY = { school: '인천디자인고등학교', tab: '쉅', refsLabel: '레퍼런스' };
-const SCHEMA_VERSION = '20';            // 시트 구조가 바뀌는 업데이트마다 올린다 → 첫 접속 때 setup이 자동으로 돈다
+const SCHEMA_VERSION = '21';            // 시트 구조가 바뀌는 업데이트마다 올린다 → 첫 접속 때 setup이 자동으로 돈다
 const TZ = 'Asia/Seoul';
 const SHEET = { TRIPS: '체험학습', CHECKS: '체크', COURSES: '수업', STUDENTS: '학생', NOTICES: '공지', REFS: '레퍼런스', TASKS: '과제', SUBS: '제출', GRADES: '채점', ALLOW: '허용', LOG: '로그', CONFIG: '설정', START: '시작하기', SURVEYS: '설문', ANSWERS: '응답', MEMES: '메인짤', ATTEND: '출결', VIBE: '바이브코딩', CH: '챌린지', CHPIN: '챌린지 PIN' };
 
@@ -41,7 +41,7 @@ const COURSE_HEADERS = ['수업ID', '수업명', '종류', '대상', '자동 배
 const STUDENT_HEADERS = ['학번', '이름', '수업', '확인코드', 'PIN해시', '솔트', '실패횟수', '잠금해제시각', 'PIN설정일시', '최근로그인', '특이사항'];
 const NOTICE_HEADERS = ['작성일', '수업', '제목', '내용', '대상 반', '고정', '게시', '첨부'];
 const REF_HEADERS = ['수업', '분류', '제목', '설명', '링크', '게시', '이미지'];
-const TASK_HEADERS = ['과제ID', '수업', '제목', '설명', '정시마감', '최종마감', '게시', '제출 칸', '모아보기 공개', '모아보기 이름', '배점', '점수 공개', '체크 항목'];
+const TASK_HEADERS = ['과제ID', '수업', '제목', '설명', '정시마감', '최종마감', '게시', '제출 칸', '모아보기 공개', '모아보기 이름', '배점', '점수 공개', '체크 항목', '현장실습 배점'];
 // 체크 항목: 학생이 올리지 않고 선생님이 항목마다 '냈다'를 표시하는 과제 (예: 실물 작품)
 const CHECK_HEADERS = ['과제ID', '학번', '이름', '체크', '수정일시'];
 const CHECK_MAX = 20;
@@ -921,7 +921,8 @@ function taskFromRow_(r) {
     galleryNames: r[9] === true,
     scale: parseScale_(r[10]),
     scoresOpen: r[11] === true,
-    checks: checkItems_(r[12])
+    checks: checkItems_(r[12]),
+    field: fieldScale_(r[13])
   };
 }
 function checkItems_(v) {
@@ -1469,7 +1470,8 @@ function teacherBoard_() {
           dueAt: t.due ? t.due.getTime() : 0, finAt: t.fin ? t.fin.getTime() : 0,
           published: t.published, hasSlots: t.slots.length > 0, slots: t.slots, subCount: counts[t.id] || 0,
           gallery: t.gallery, galleryNames: t.galleryNames,
-          scale: t.scale, graded: t.scale.length > 0, scoresOpen: t.scoresOpen, checks: t.checks };
+          scale: t.scale, graded: t.scale.length > 0, scoresOpen: t.scoresOpen, checks: t.checks,
+          field: t.field.bands.length ? fieldText_(t.field) : '' };
       });
     })()
   };
@@ -1606,6 +1608,12 @@ function apiTeacherSaveTask(token, courseId, d) {
     if (!parsed.length) return fail_('배점을 A:20, B:17 처럼 "등급:점수"를 쉼표로 이어 적어 주세요.');
     scale = parsed.map(function (x) { return x.g + ':' + x.p; }).join(', ');
   }
+  let field = '';
+  if (d.graded && String(d.field || '').trim()) {
+    const f = fieldScale_(d.field);
+    if (!f.bands.length) return fail_('현장실습 배점을 100:70, 95:63, 미제출:10 처럼 "총점 이상:점수"로 적어 주세요.');
+    field = fieldText_(f);
+  }
 
   const names = {};
   const slots = [];
@@ -1653,7 +1661,7 @@ function apiTeacherSaveTask(token, courseId, d) {
       row = freeRow_(sh, 1);
     }
     sh.getRange(row, 1, 1, TASK_HEADERS.length).setValues([[taskId, courseId, title, desc, new Date(dueAt), new Date(finAt),
-      d.published !== false, slotText, keep[0], keep[1], scale, scoresOpen, checkItems_((d.checks || []).join(',')).join(', ')]]);
+      d.published !== false, slotText, keep[0], keep[1], scale, scoresOpen, checkItems_((d.checks || []).join(',')).join(', '), field]]);
   } finally {
     lock.releaseLock();
   }
@@ -2829,7 +2837,20 @@ function apiTeacherGrade(token, taskId, studentId, mark) {
   taskId = String(taskId); studentId = normId_(studentId); mark = String(mark || '').trim();
   const task = getTask_(taskId);
   if (!task) return fail_('과제를 찾을 수 없습니다.');
-  const pick = task.scale.filter(function (x) { return x.g === mark; })[0];
+  let pick = task.scale.filter(function (x) { return x.g === mark; })[0];
+  if (/^현장/.test(mark)) { // 현장실습 학생: 현장실습평가서 총점 → 과제 점수
+    if (!task.field.bands.length) return fail_('이 과제에는 현장실습 배점이 없습니다. 과제 설정에서 넣어 주세요.');
+    const v = mark.replace(/^현장\s*/, '');
+    if (v === '미제출') {
+      if (task.field.none == null) return fail_('현장실습 배점에 "미제출:점수"를 넣어 주세요.');
+      pick = { g: '현장 미제출', p: task.field.none };
+    } else {
+      const total = Number(v);
+      if (!isFinite(total) || total < 0 || total > 100 || v === '') return fail_('현장실습평가서 총점은 0~100 사이 숫자로 적어 주세요.');
+      pick = { g: '현장 ' + (Math.round(total * 10) / 10), p: fieldPoints_(task.field, total) };
+    }
+    mark = pick.g;
+  }
   if (mark && !pick) return fail_('배점에 없는 등급입니다.');
   const res = upsertGrade_(taskId, studentId, function (row) {
     const before = String(row[G.GRADE] || '') + ' ' + row[G.POINTS];
@@ -3224,6 +3245,7 @@ function autoSyncTick() {
   try { onceTestStudent_(); } catch (e) { try { diagRow_('테스트 학생 실패', e.message); } catch (x) {} }
   try { onceCleanup5_(); } catch (e) { try { diagRow_('정리 실패', e.message); } catch (x) {} }
   try { onceFixName6_(); } catch (e) { try { diagRow_('이름 고침 실패', e.message); } catch (x) {} }
+  try { onceFieldScale7_(); } catch (e) { try { diagRow_('현장실습 배점 실패', e.message); } catch (x) {} }
   try { onceCheckTask_(); } catch (e) { try { diagRow_('체크 과제 실패', e.message); } catch (x) {} }
   try { onceTasks_(); } catch (e) { syncLog_('정리 실패: ' + e.message); try { diagRow_('동아리 추가 실패', e.message); } catch (x) {} }
   try {
@@ -4034,4 +4056,45 @@ function apiTeacherChResetPin(token, phone) {
   const sh = sheet_(SHEET.CHPIN), rows = read_(sh, CHPIN_HEADERS.length);
   for (let i = rows.length - 1; i >= 0; i--) if (String(rows[i][0]).replace(/\D/g, '') === phone) { sh.deleteRow(i + 2); log_('', '교사', '챌린지 PIN 초기화', phone.slice(-4)); return { ok: true }; }
   return fail_('그 번호로 정한 PIN이 없어요.');
+}
+
+
+/* 현장실습 학생 채점: '100:70, 95:63, 90:56, …, 60:27, 미제출:10'
+   총점이 그 값 이상인 첫 구간의 점수. 가장 낮은 구간보다 낮으면 가장 낮은 구간 점수(기본 점수). */
+function fieldScale_(cell) {
+  const bands = [];
+  let none = null;
+  String(cell || '').split(/[,;\n]/).forEach(function (part) {
+    const m = part.trim().match(/^(.+?)\s*[:=]\s*(-?\d+(?:\.\d+)?)$/);
+    if (!m) return;
+    const k = m[1].trim(), p = Number(m[2]);
+    if (/미제출/.test(k)) none = p;
+    else if (/^\d+(\.\d+)?$/.test(k) && Number(k) <= 100) bands.push({ min: Number(k), p: p });
+  });
+  bands.sort(function (a, b) { return b.min - a.min; });
+  return { bands: bands, none: none };
+}
+function fieldText_(f) {
+  return f.bands.map(function (b) { return b.min + ':' + b.p; }).concat(f.none == null ? [] : ['미제출:' + f.none]).join(', ');
+}
+function fieldPoints_(f, total) {
+  for (let i = 0; i < f.bands.length; i++) if (total >= f.bands[i].min) return f.bands[i].p;
+  return f.bands.length ? f.bands[f.bands.length - 1].p : 0;
+}
+
+/** 한 번만: 3학년 두 과목(가구제작·3D 프린팅) 평가 과제에 현장실습 배점 넣기 */
+function onceFieldScale7_() {
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty('ONCE7_DONE') === 'v1') return;
+  props.setProperty('ONCE7_DONE', 'v1');
+  const set = {
+    'T261007121751': '100:70, 95:63, 90:56, 85:49, 80:42, 70:35, 60:27, 미제출:10',  // 가구제작: 요소를 더한 가구 리디자인-모델링 (70점)
+    'T261007122950': '100:30, 90:25, 80:20, 70:15, 60:10, 미제출:5',                 // 가구제작: 요소를 더한 가구 렌더링 (30점)
+    'T261012083918': '100:100, 95:97, 90:94, 88:91, 86:88, 84:85, 82:82, 80:80, 78:75, 75:70, 72:60, 70:50, 65:40, 60:30, 미제출:15' // 3D 프린팅: 블렌더를 활용한 제품디자인 (100점)
+  };
+  const sh = sheet_(SHEET.TASKS);
+  const rows = read_(sh, TASK_HEADERS.length);
+  const done = [];
+  rows.forEach(function (r, i) { const id = String(r[0]).trim(); if (set[id]) { sh.getRange(i + 2, 14).setValue(set[id]); done.push(String(r[2])); } });
+  diagRow_('현장실습 배점', done.length ? done.join(' / ') + ' 에 넣음' : '대상 과제를 못 찾음');
 }
