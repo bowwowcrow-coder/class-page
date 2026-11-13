@@ -5,7 +5,15 @@
   var KEY = 'shell_v1';
   var B = window.BOOT || {};
   var title = B.title || '쉅', manifest = B.manifest || '/manifest.webmanifest', icon = B.icon || '/apple-touch-icon.png';
-  var refresh = 'setTimeout(function(){fetch(API+"?raw=1").then(function(r){return r.ok?r.text():""}).then(function(h){if(h.indexOf("<head>")>=0){try{localStorage.setItem(' + JSON.stringify(KEY) + ',h)}catch(e){}}}).catch(function(){})},2500);';
+  // 저장해 둔 화면을 띄운 뒤 뒤에서 새 화면을 받아 온다. 프로그램 부분(마지막 <script>)이 바뀌었으면: 아직 아무것도 안 눌렀으면 바로 새로고침, 눌렀으면 위에 '새 버전' 띠를 띄운다.
+  var refresh = 'var used=false;["pointerdown","keydown"].forEach(function(t){addEventListener(t,function(){used=true},true)});setTimeout(function(){' +
+    'function sig(h){var i=h.lastIndexOf("<script>");var x=i<0?h:h.slice(i);var n=0;for(var k=0;k<x.length;k++){n=(n*31+x.charCodeAt(k))|0}return x.length+":"+n}' +
+    'fetch(API+"?raw=1").then(function(r){return r.ok?r.text():""}).then(function(h){if(h.indexOf("<head>")<0)return;var old="";try{old=localStorage.getItem(' + JSON.stringify(KEY) + ')||""}catch(e){}' +
+    'try{localStorage.setItem(' + JSON.stringify(KEY) + ',h)}catch(e){}' +
+    'if(!window.__fromCache||!old||sig(old)===sig(h))return;' +
+    'if(!used){location.reload();return}' +
+    'var b=document.createElement("button");b.textContent="새 버전이 있어요 · 눌러서 새로고침";b.style.cssText="position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:99999;padding:10px 18px;border:0;border-radius:999px;background:#0071e3;color:#fff;font:600 14px -apple-system,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.2);cursor:pointer";b.onclick=function(){location.reload()};document.body.appendChild(b)' +
+    '}).catch(function(){})},1500);';
   // 화면 코드가 쓰던 google.script.run 을 그대로 흉내 낸다
   var shim = '<script>(function(){var API=' + JSON.stringify(API) + ';' +
     'function mk(ok,fail){var o={withSuccessHandler:function(f){return mk(f,fail)},withFailureHandler:function(f){return mk(ok,f)}};' +
@@ -29,6 +37,7 @@
   var cached = null;
   try { cached = localStorage.getItem(KEY); } catch (e) {}
   if (cached && cached.indexOf('<head>') >= 0) {
+    cached = cached.replace('<head>', '<head><script>window.__fromCache=true;<\/script>');
     // 문서를 다 읽은 뒤에 갈아 끼워야 한다 (읽는 도중의 document.open은 무시되고 아래에 덧붙는다)
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { render(cached); });
     else render(cached);
