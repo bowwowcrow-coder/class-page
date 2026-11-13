@@ -1,10 +1,10 @@
 {
-  "version": "20261113.1052",
-  "note": "체험 학생 10101 인디고, 코드 1111",
+  "version": "20261113.1226",
+  "note": "현장실습 총점은 학생마다 한 번만",
   "files": [
     {
       "name": "Code.gs",
-      "sha256": "dd6cfa0cf1ad9ab1fda99d22a122bee363cd216b7f3cc9d767e5e1c2dabe0c86"
+      "sha256": "9f36987920408ac916215378bfb826c746af0a40af7018dd548e1b769530b073"
     },
     {
       "name": "Demo.gs",
@@ -12,7 +12,7 @@
     },
     {
       "name": "Index.html",
-      "sha256": "d6a5b3423d8ace4b81d925187a58146925ee30a6db621e41f40a8ca8fe0dab78"
+      "sha256": "c08be3cabccb37b7cf5672f91b3dfed7b03f5ee48c6426ff4ecf769b2935f355"
     },
     {
       "name": "Setup.html",

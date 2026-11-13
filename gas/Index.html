@@ -348,6 +348,7 @@
   .ch-line .k { flex: none; width: 72px; color: var(--sub); }
   .ch-line .v { flex: 1; min-width: 0; white-space: pre-line; word-break: break-all; }
   .fieldgrade { margin-bottom: 6px; }
+  .fieldgrade .hint { white-space: pre-line; }
   .fg-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
   .fg-row input { width: 130px; min-height: 44px; padding: 8px 12px; border: 0; border-radius: 10px; background: var(--fill); color: var(--ink); font: inherit; font-size: 17px; }
   .fg-row .mini { margin-top: 0; height: 40px; }
@@ -4708,31 +4709,44 @@
           b.appendChild(el('small', '', x.p + '점'));
           grades.appendChild(b);
         });
-        // 현장실습 학생: 현장실습평가서 총점을 넣으면 과제의 현장실습 배점표대로 점수가 들어간다
+        // 현장실습 학생: 현장실습평가서 총점은 학생마다 하나 → 한 번 넣으면 이 학생이 듣는 모든 수업의 현장실습 배점 과제에 들어간다
         var isField = task.field && /현장실습/.test(s.note || '');
         if (isField) {
           var fb = el('div', 'fieldgrade');
-          fb.appendChild(el('p', 'hint', '현장실습 학생이라 현장실습평가서 총점으로 채점합니다. (' + task.field + ')'));
+          fb.appendChild(el('p', 'hint', '현장실습평가서 총점 · 모든 수업 공통이라 한 번만 넣으면 됩니다. (이 과제: ' + task.field + ')'));
           var fr = el('div', 'fg-row');
           var tot = el('input'); tot.type = 'number'; tot.inputMode = 'decimal'; tot.min = 0; tot.max = 100; tot.step = 'any'; tot.placeholder = '평가서 총점';
-          var m0 = /^현장 (\d+(\.\d+)?)$/.exec(g.mark || ''); if (m0) tot.value = m0[1];
+          if (res.fieldTotal && res.fieldTotal !== '미제출') tot.value = res.fieldTotal;
           var prev = el('span', 'fg-prev', '');
           var bands = task.field.split(',').map(function (x) { var m = x.trim().split(':'); return { k: m[0].trim(), p: Number(m[1]) }; });
           var calc = function () {
             var v = tot.value === '' ? NaN : Number(tot.value);
-            if (!isFinite(v)) { prev.textContent = ''; return; }
+            if (!isFinite(v)) { prev.textContent = res.fieldTotal === '미제출' ? '평가서 미제출' : ''; return; }
             var nums = bands.filter(function (b) { return /^\d/.test(b.k); }).sort(function (a, b) { return Number(b.k) - Number(a.k); });
             var p = nums.length ? nums[nums.length - 1].p : 0;
             for (var i = 0; i < nums.length; i++) if (v >= Number(nums[i].k)) { p = nums[i].p; break; }
-            prev.textContent = '→ ' + p + '점';
+            prev.textContent = '→ 이 과제 ' + p + '점';
+          };
+          var applied = el('p', 'hint', '');
+          var saveTotal = function (value) {
+            grades.classList.add('busy');
+            call('apiTeacherFieldTotal', ttoken, s.id, value).then(function (r) {
+              r = must(r);
+              res.fieldTotal = r.total;
+              applied.textContent = r.applied.length ? r.applied.map(function (a) { return a.course + ' · ' + a.title + ' ' + a.points + '점'; }).join('\n') + '\n에 들어갔어요.' : '현장실습 배점이 있는 과제가 없어 점수는 아직 안 들어갔어요.';
+              var mine = r.applied.filter(function (a) { return a.title === task.title; })[0];
+              if (mine) { g.mark = r.total === '미제출' ? '현장 미제출' : '현장 ' + r.total; g.points = mine.points; g.gradedAt = '방금'; s.mark = g.mark; s.points = g.points; stale = false; }
+              calc(); paint(); behind();
+            }).catch(function (err) { if (err && err.known) applied.textContent = err.message; })
+              .then(function () { grades.classList.remove('busy'); });
           };
           tot.addEventListener('input', calc);
-          tot.addEventListener('keydown', function (e) { if (e.key === 'Enter') setMark('현장 ' + tot.value); });
+          tot.addEventListener('keydown', function (e) { if (e.key === 'Enter' && tot.value !== '') saveTotal(tot.value); });
           fr.appendChild(tot); fr.appendChild(prev);
-          fr.appendChild(button('mini', '저장', function () { if (tot.value !== '') setMark('현장 ' + tot.value); }));
-          var nb = button('mini', '평가서 미제출', function () { setMark('현장 미제출'); });
-          fr.appendChild(nb);
+          fr.appendChild(button('mini', '저장', function () { if (tot.value !== '') saveTotal(tot.value); }));
+          fr.appendChild(button('mini', '평가서 미제출', function () { tot.value = ''; saveTotal('미제출'); }));
           fb.appendChild(fr);
+          fb.appendChild(applied);
           body.appendChild(fb);
           calc();
           grades.hidden = true;

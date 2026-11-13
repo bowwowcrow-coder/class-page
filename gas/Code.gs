@@ -25,7 +25,7 @@ const CFG_HELP = {
 };
 // 설정 도우미가 생기기 전부터 쓰던 시트는 예전에 보이던 그대로 이어 간다
 const LEGACY = { school: '인천디자인고등학교', tab: '쉅', refsLabel: '레퍼런스' };
-const SCHEMA_VERSION = '21';            // 시트 구조가 바뀌는 업데이트마다 올린다 → 첫 접속 때 setup이 자동으로 돈다
+const SCHEMA_VERSION = '22';            // 시트 구조가 바뀌는 업데이트마다 올린다 → 첫 접속 때 setup이 자동으로 돈다
 const TZ = 'Asia/Seoul';
 const SHEET = { TRIPS: '체험학습', CHECKS: '체크', COURSES: '수업', STUDENTS: '학생', NOTICES: '공지', REFS: '레퍼런스', TASKS: '과제', SUBS: '제출', GRADES: '채점', ALLOW: '허용', LOG: '로그', CONFIG: '설정', START: '시작하기', SURVEYS: '설문', ANSWERS: '응답', MEMES: '메인짤', ATTEND: '출결', VIBE: '바이브코딩', CH: '챌린지', CHPIN: '챌린지 PIN' };
 
@@ -39,7 +39,7 @@ const LIMIT = { image: 8 * MB, pdf: 10 * MB, file: 25 * MB, thumb: 1 * MB, text:
 const TEXT_MAX = 3000;         // 글 칸 최대 글자 수 // 파일 하나의 최대 크기
 
 const COURSE_HEADERS = ['수업ID', '수업명', '종류', '대상', '자동 배정 반', '사용'];
-const STUDENT_HEADERS = ['학번', '이름', '수업', '확인코드', 'PIN해시', '솔트', '실패횟수', '잠금해제시각', 'PIN설정일시', '최근로그인', '특이사항'];
+const STUDENT_HEADERS = ['학번', '이름', '수업', '확인코드', 'PIN해시', '솔트', '실패횟수', '잠금해제시각', 'PIN설정일시', '최근로그인', '특이사항', '현장실습 총점'];
 const NOTICE_HEADERS = ['작성일', '수업', '제목', '내용', '대상 반', '고정', '게시', '첨부'];
 const REF_HEADERS = ['수업', '분류', '제목', '설명', '링크', '게시', '이미지'];
 const TASK_HEADERS = ['과제ID', '수업', '제목', '설명', '정시마감', '최종마감', '게시', '제출 칸', '모아보기 공개', '모아보기 이름', '배점', '점수 공개', '체크 항목', '현장실습 배점'];
@@ -59,7 +59,7 @@ const SURVEY_HEADERS = ['설문ID', '수업', '제목', '설명', '익명', '문
 const ANSWER_HEADERS = ['설문ID', '학번', '이름', '응답일시', '응답'];
 const ATTEND_HEADERS = ['날짜', '수업', '학번', '이름', '유형', '구분', '교시', '사유', '나이스 입력', '수정일시', '인정 사유', '받은 서류', '서류 직접', '서류 사진'];
 const MEME_HEADERS = ['짤ID', '학번', '이름', '올린일시', '문구', '상태', '호수', '파일ID', '썸네일', '투표', '이름 공개'];
-const C = { ID: 0, NAME: 1, COURSES: 2, CODE: 3, HASH: 4, SALT: 5, FAILS: 6, LOCK: 7, SETAT: 8, LAST: 9, NOTE: 10 };
+const C = { ID: 0, NAME: 1, COURSES: 2, CODE: 3, HASH: 4, SALT: 5, FAILS: 6, LOCK: 7, SETAT: 8, LAST: 9, NOTE: 10, FIELD: 11 };
 const S = { TASK: 0, ID: 1, NAME: 2, AT: 3, FIRST: 4, STATE: 5, LATE: 6, COUNT: 7, FOLDER: 8, ZIP: 9, THUMB: 10, FILES: 11, ALT: 12 };
 
 // 학생 특이사항. 현장실습·취업은 평가 과제를 '대체과제'로 낸다(형식·개수 제한 없음, 파일명 끝에 대체과제).
@@ -1560,7 +1560,8 @@ function apiTeacherDetail(token, taskId, studentId) {
   const st = findStudent_(studentId);
   const out = { ok: true, allowed: !!allowSet_()[taskId + '|' + studentId], submission: null, grade: gradeView_(g ? g.v : null), stale: staleGrade_(g ? g.v : null, sub ? sub.v : null),
     pin: !st ? 'none' : (lockMessage_(st.v) ? 'locked' : (st.v[C.HASH] ? 'set' : 'none')), // PIN 숫자는 저장하지 않아 상태만 알 수 있다
-    status: st ? statusOf_(st.v) : '', statusList: STATUS_LIST, altStatus: ALT_STATUS };
+    status: st ? statusOf_(st.v) : '', statusList: STATUS_LIST, altStatus: ALT_STATUS,
+    fieldTotal: st ? String(st.v[C.FIELD] === '' || st.v[C.FIELD] == null ? '' : st.v[C.FIELD]) : '' };
   if (!sub) return out;
   const v = sub.v;
   let thumb = '';
@@ -1678,6 +1679,7 @@ function apiTeacherSaveTask(token, courseId, d) {
     lock.releaseLock();
   }
   log_('', '교사', d.id ? '과제 수정' : '과제 만들기', courseId + ' · ' + title + (scale ? ' · 평가' : ''));
+  if (field) { try { applyFieldAll_(taskId); } catch (e) {} } // 이미 총점을 넣어 둔 현장실습 학생은 이 과제에도 바로 점수가 들어간다
   return { ok: true, taskId: taskId, board: teacherBoard_() };
 }
 
@@ -4171,4 +4173,69 @@ function onceDemo9_() {
   s.sh.getRange(s.row, 1, 1, 3).setNumberFormat('@').setValues([['10101', '인디고', '디일']]);
   s.sh.getRange(s.row, C.HASH + 1, 1, 4).setValues([[hashPin_('1111', salt), salt, 0, '']]);
   diagRow_('체험 학생', '10101 인디고 (디자인 일반) PIN 1111, 교사 체험 코드 ' + demoCode_());
+}
+
+
+/* 현장실습평가서 총점은 학생마다 하나: 한 번 넣으면 그 학생이 듣는 모든 수업의 '현장실습 배점'이 있는 과제에 점수가 들어간다. */
+function fieldPick_(task, v) {
+  v = String(v == null ? '' : v).trim();
+  if (!v || !task.field.bands.length) return null;
+  if (v === '미제출') return task.field.none == null ? null : { g: '현장 미제출', p: task.field.none };
+  const total = Number(v);
+  if (!isFinite(total)) return null;
+  return { g: '현장 ' + (Math.round(total * 10) / 10), p: fieldPoints_(task.field, total) };
+}
+function setFieldGrade_(task, sid, pick) {
+  return upsertGrade_(task.id, sid, function (row) {
+    const before = String(row[G.GRADE] || '') + ' ' + row[G.POINTS];
+    row[G.GRADE] = pick.g; row[G.POINTS] = pick.p; row[G.AT] = new Date();
+    if (row[G.CONF] instanceof Date && Number(row[G.CONFP]) !== pick.p) { row[G.CONF] = ''; row[G.CONFP] = ''; }
+    return before.trim() && before.trim() !== pick.g + ' ' + pick.p ? '이전 ' + before.trim() : '';
+  });
+}
+/** 이 학생의 총점을 그 학생이 듣는 모든 현장실습 배점 과제에 반영 */
+function applyField_(sid, value) {
+  const st = findStudent_(sid);
+  if (!st) return [];
+  const courses = {};
+  activeCourses_().forEach(function (c) { if (enrolled_(c.id, c.auto, sid, st.v[C.COURSES])) courses[c.id] = c; });
+  const done = [];
+  allTasks_().forEach(function (t) {
+    if (!courses[t.course] || !t.scale.length) return;
+    const pick = fieldPick_(t, value);
+    if (!pick) return;
+    const r = setFieldGrade_(t, sid, pick);
+    done.push({ course: courses[t.course].name, title: t.title, points: pick.p });
+    log_(sid, String(st.v[C.NAME]), '채점', t.id + ' · ' + pick.g + ' ' + pick.p + '점 (현장실습 총점)' + (r.note ? ' · ' + r.note : ''));
+  });
+  return done;
+}
+/** 과제에 현장실습 배점을 새로 넣었을 때: 총점이 있는 그 수업 현장실습 학생들에게 반영 */
+function applyFieldAll_(taskId) {
+  const t = getTask_(taskId);
+  if (!t || !t.field.bands.length) return;
+  const c = activeCourses_().filter(function (x) { return x.id === t.course; })[0];
+  if (!c) return;
+  rows_(SHEET.STUDENTS, STUDENT_HEADERS.length).forEach(function (v) {
+    const sid = normId_(v[C.ID]);
+    if (!validId_(sid) || statusOf_(v) !== '현장실습' || String(v[C.FIELD] == null ? '' : v[C.FIELD]).trim() === '') return;
+    if (!enrolled_(c.id, c.auto, sid, v[C.COURSES])) return;
+    const pick = fieldPick_(t, v[C.FIELD]);
+    if (pick) setFieldGrade_(t, sid, pick);
+  });
+}
+function apiTeacherFieldTotal(token, studentId, value) {
+  if (!isTeacher_(token)) return expired_();
+  studentId = normId_(studentId);
+  value = String(value == null ? '' : value).trim();
+  if (value !== '미제출') {
+    const n = Number(value);
+    if (value === '' || !isFinite(n) || n < 0 || n > 100) return fail_('현장실습평가서 총점은 0~100 사이 숫자로 적어 주세요.');
+    value = String(Math.round(n * 10) / 10);
+  }
+  const st = findStudent_(studentId);
+  if (!st) return fail_('학생을 찾을 수 없습니다.');
+  st.sh.getRange(st.row, C.FIELD + 1).setValue(value);
+  const done = applyField_(studentId, value);
+  return { ok: true, total: value, applied: done };
 }
