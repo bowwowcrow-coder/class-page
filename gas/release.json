@@ -1,10 +1,10 @@
 {
-  "version": "20261113.1232",
-  "note": "현장 점수를 학생 총점으로 옮기기",
+  "version": "20261113.1412",
+  "note": "레퍼런스에 이미지 올리기",
   "files": [
     {
       "name": "Code.gs",
-      "sha256": "6404f37a7e5461c1a886e9c9ee24c384d034e246ea4aafca512b66961adc8df9"
+      "sha256": "0703d6324e8d6f8d108ecb4694308713cdec86dd26b1c275f58e709b34c0acca"
     },
     {
       "name": "Demo.gs",
@@ -12,7 +12,7 @@
     },
     {
       "name": "Index.html",
-      "sha256": "c08be3cabccb37b7cf5672f91b3dfed7b03f5ee48c6426ff4ecf769b2935f355"
+      "sha256": "e707980dfa4f982fff93de69f9967eac63296c84124eb37d0ff504543b666ee0"
     },
     {
       "name": "Setup.html",

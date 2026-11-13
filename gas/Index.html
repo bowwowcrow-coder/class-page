@@ -1456,6 +1456,8 @@
         var linked = /^https?:\/\//i.test(r.url);
         var row = el(linked ? 'a' : 'div', 'row');
         if (linked) { row.href = r.url; row.target = '_blank'; row.rel = 'noopener'; }
+        var driveId = (String(r.url).match(/^https:\/\/drive\.google\.com\/file\/d\/([A-Za-z0-9_\-]+)/) || [])[1];
+        if (driveId) row.addEventListener('click', function (e) { e.preventDefault(); openNoticeFile({ id: driveId, n: r.title, s: 0 }); }); // 올린 이미지는 앱 안에서 크게
         row.appendChild(refThumb(r, linked));
         var text = el('div', 'row-text');
         text.appendChild(el('div', 'row-title', r.title));
@@ -4227,6 +4229,30 @@
     wrap.appendChild(field('제목', title));
     wrap.appendChild(field('설명', desc));
     wrap.appendChild(field('링크', url));
+    // 링크 대신 이미지 자체를 자료로: 드라이브에 올리고 그 주소를 링크 칸에 넣는다. 썸네일이 비어 있으면 같은 그림으로 채운다.
+    var upPick = el('input'); upPick.type = 'file'; upPick.accept = 'image/*'; upPick.hidden = true;
+    var upMsg = el('p', 'hint', '');
+    var upBtn = button('mini', '링크 대신 이미지 올리기', function () { upPick.click(); });
+    upBtn.style.marginTop = '0';
+    upPick.addEventListener('change', function () {
+      var file = upPick.files[0]; upPick.value = '';
+      if (!file) return;
+      upMsg.textContent = '올리는 중…'; upBtn.disabled = true;
+      var img0;
+      loadImage(fileUrl(file), file.name).then(function (img) {
+        img0 = img;
+        var b64 = shrink(img, 2400, 0.88);
+        return call('apiTeacherNoticeFile', ttoken, file.name.replace(/\.[^.]+$/, '') + '.jpg', 'image/jpeg', b64, 'ref');
+      }).then(function (res) {
+        res = must(res);
+        url.value = 'https://drive.google.com/file/d/' + res.file.id + '/view';
+        if (!title.value.trim()) title.value = file.name.replace(/\.[^.]+$/, '').slice(0, 100);
+        if (!imageValue && img0) { imageValue = 'data:image/jpeg;base64,' + squareThumb(img0, 160, 0.8); if (imageValue.length > 40000) imageValue = 'data:image/jpeg;base64,' + squareThumb(img0, 120, 0.7); drawThumb(); }
+        upMsg.textContent = '이미지를 올렸어요. 저장을 누르면 학생 화면에서 눌렀을 때 크게 보여요.';
+      }).catch(function (err) { upMsg.textContent = err && err.message !== 'expired' ? friendly(err) : ''; })
+        .then(function () { upBtn.disabled = false; });
+    });
+    wrap.appendChild(upBtn); wrap.appendChild(upPick); wrap.appendChild(upMsg);
     wrap.appendChild(el('h4', 'sec', '썸네일 이미지 (선택)'));
     wrap.appendChild(thumbRow);
     wrap.appendChild(thumbMsg);

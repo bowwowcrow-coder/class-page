@@ -2673,7 +2673,9 @@ function apiNoticeFileGet(token, id) {
   id = String(id || '');
   const ok = rows_(SHEET.NOTICES, NOTICE_HEADERS.length).some(function (r) {
     return String(r[2]).trim() && noticeFiles_(r[7]).some(function (f) { return f.id === id; });
-  });
+  }) || (id.length > 10 && rows_(SHEET.REFS, REF_HEADERS.length).some(function (r) { // 레퍼런스로 올린 이미지
+    return String(r[2]).trim() && String(r[4] || '').indexOf('/file/d/' + id) >= 0;
+  }));
   if (!ok) return fail_('지워졌거나 없는 파일이에요.');
   try {
     const f = DriveApp.getFileById(id), blob = f.getBlob();
@@ -2682,14 +2684,14 @@ function apiNoticeFileGet(token, id) {
     return fail_('파일을 열 수 없어요. 드라이브에서 지워졌을 수 있어요.');
   }
 }
-function apiTeacherNoticeFile(token, name, mime, b64) {
+function apiTeacherNoticeFile(token, name, mime, b64, folder) {
   if (!isTeacher_(token)) return expired_();
   name = String(name || '파일').replace(/[\\\/:*?"<>|]+/g, '_').slice(0, 80);
   mime = String(mime || 'application/octet-stream').slice(0, 100);
   b64 = String(b64 || '');
   if (!b64 || b64.length > NOTICE_FILE_MAX || !/^[A-Za-z0-9+\/=]+$/.test(b64)) return fail_('파일이 너무 크거나 읽을 수 없어요. 10MB까지 올릴 수 있어요.');
   const bytes = Utilities.base64Decode(b64);
-  const file = childFolder_(rootFolder_(), '공지 첨부').createFile(Utilities.newBlob(bytes, mime, name));
+  const file = childFolder_(rootFolder_(), folder === 'ref' ? '레퍼런스 이미지' : '공지 첨부').createFile(Utilities.newBlob(bytes, mime, name));
   let shared = true;
   try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (e) { shared = false; }
   return { ok: true, shared: shared, file: { id: file.getId(), n: name, k: /^image\//.test(mime) ? 'img' : 'file', s: bytes.length } };
