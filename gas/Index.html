@@ -352,6 +352,9 @@
   .fg-row input { width: 130px; min-height: 44px; padding: 8px 12px; border: 0; border-radius: 10px; background: var(--fill); color: var(--ink); font: inherit; font-size: 17px; }
   .fg-row .mini { margin-top: 0; height: 40px; }
   .fg-prev { min-width: 60px; font-weight: 700; color: var(--accent); }
+  .demo-pill { margin-left: 6px; padding: 1px 7px; border-radius: 6px; background: #ff9f0a; color: #fff; font-size: 12px; font-weight: 700; }
+  .demo-bar { position: sticky; top: 0; z-index: 30; grid-column: 1 / -1; padding: 8px 16px; background: #fff4e0; color: #8a4b00; font-size: 13px; font-weight: 600; text-align: center; }
+  @media (prefers-color-scheme: dark) { .demo-bar { background: #3a2a10; color: #ffcc80; } }
   .sum-acts { display: flex; gap: 16px; flex-wrap: wrap; justify-content: flex-end; }
   .copy-head { display: flex; justify-content: space-between; align-items: baseline; margin: 4px 0 6px; }
   .copy-head .link { width: auto; margin: 0; padding: 4px 0; }
@@ -795,7 +798,7 @@
   <aside class="side">
     <h1 class="brand"><?= appTitle ?></h1>
     <div class="who">
-      <span class="who-name">교사</span>
+      <span class="who-name">교사</span><span class="demo-pill" hidden>체험</span>
       <button id="tlogout" type="button">로그아웃</button>
     </div>
     <nav id="tnav" class="nav" aria-label="수업 이동"></nav>
@@ -1042,6 +1045,7 @@
       ttoken = res.token;
       keep(sessionStorage, TTOKEN_KEY, ttoken);
       if (res.device) keep(localStorage, TDEV_KEY, res.device);
+      setDemo(!!res.demo);
       startTeacher(res.board);
       return res;
     });
@@ -1066,6 +1070,7 @@
   }
 
   function signOut(message) {
+    setDemo(false);
     var old = token || ttoken;
     token = null; ttoken = null; trip.data = null; trip.view = 'list'; trip.edit = null; myAtt = null;
     keep(sessionStorage, TOKEN_KEY, null);
@@ -2210,6 +2215,14 @@
   }
 
   /* ═════════════ 교사 화면 ═════════════ */
+  // 체험용 교사 코드로 들어오면: 실제 화면 그대로, 단 점수·출결은 가려지고 저장은 안 된다 (서버가 막는다)
+  function setDemo(on) {
+    document.body.classList.toggle('demo-t', on);
+    document.querySelectorAll('.demo-pill').forEach(function (p) { p.hidden = !on; });
+    var bar = $('demoBar');
+    if (on && !bar) { bar = el('div', 'demo-bar', '체험 모드 · 실제 학생의 점수·출결·신청서는 가려져 있고, 눌러도 저장되지 않아요.'); bar.id = 'demoBar'; $('tapp').insertBefore(bar, $('tapp').firstChild); }
+    if (bar) bar.hidden = !on;
+  }
   function startTeacher(b, pre) {
     board = b;
     var withTask = board.courses.filter(function (c) { return fromCourse(board.tasks, c.id).length; })[0];
@@ -4871,7 +4884,7 @@
     }).catch(showAuth);
   } else if (ttoken) {
     call('apiTeacherBoard', ttoken).then(function (res) {
-      if (res && res.ok) startTeacher(res.board);
+      if (res && res.ok) { setDemo(!!res.demo); startTeacher(res.board); }
       else { ttoken = null; keep(sessionStorage, TTOKEN_KEY, null); showAuth(); }
     }).catch(showAuth);
   } else if (token) {

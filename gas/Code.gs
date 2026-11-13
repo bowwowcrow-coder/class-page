@@ -31,6 +31,7 @@ const SHEET = { TRIPS: '체험학습', CHECKS: '체크', COURSES: '수업', STUD
 
 const PIN_LENGTH = 4;          // PIN 자릿수
 const MAX_FAILS = 5;           // 연속 오류 허용 횟수
+const T_MAX_FAILS = 15;        // 교사 비밀번호 (발표 때 여럿이 틀려도 바로 잠기지 않게)
 const LOCK_MINUTES = 10;       // 잠금 시간(분)
 const SESSION_SECONDS = 21600; // 로그인 유지 6시간
 const MB = 1024 * 1024;
@@ -121,7 +122,12 @@ function doPost(e) {
     const f = /^api[A-Z][A-Za-z0-9]*$/.test(fn) ? globalThis[fn] : null;
     if (typeof f !== 'function') throw new Error('없는 기능입니다: ' + fn);
     autoSetup_();
-    out = { v: f.apply(null, Array.isArray(req.args) ? req.args : []) };
+    const args = Array.isArray(req.args) ? req.args : [];
+    // 체험용 교사 계정: 화면은 그대로 보되, 저장은 막고 점수·출결 같은 학생 정보는 가린다
+    if (/^apiTeacher/.test(fn) && fn !== 'apiTeacherLogin' && isDemo_(args[0])) {
+      if (DEMO_READ.indexOf(fn) < 0) out = { v: fail_('체험용 계정이라 저장되지 않아요. 화면만 둘러봐 주세요.') };
+      else out = { v: demoMask_(fn, f.apply(null, args)) };
+    } else out = { v: f.apply(null, args) };
   } catch (err) {
     out = { err: String(err && err.message || err) };
   }
@@ -1394,7 +1400,12 @@ function baseName_(task, id, name) { return id + '_' + clean_(name) + '_' + clea
 
 function apiTeacherLogin(password, remember) {
   const cache = CacheService.getScriptCache();
-  if (Number(cache.get('tfail') || 0) >= MAX_FAILS) return fail_('여러 번 틀려 잠겨 있습니다. ' + LOCK_MINUTES + '분 뒤에 다시 시도해 주세요.');
+  if (demoOn_() && String(password || '').trim() === demoCode_()) { // 체험용 교사 코드: 잠금 횟수와 상관없이
+    const dt = Utilities.getUuid() + Utilities.getUuid().replace(/-/g, '');
+    cache.put('tsess:' + dt, 'demo', SESSION_SECONDS);
+    return { ok: true, token: dt, device: '', demo: true, board: teacherBoard_() };
+  }
+  if (Number(cache.get('tfail') || 0) >= T_MAX_FAILS) return fail_('여러 번 틀려 잠겨 있습니다. ' + LOCK_MINUTES + '분 뒤에 다시 시도해 주세요.');
   const props = PropertiesService.getScriptProperties();
   const hash = props.getProperty('T_HASH');
   if (!hash) return fail_('시트 메뉴 [수업 관리] > 교사 비밀번호 설정을 먼저 해 주세요.');
@@ -1452,7 +1463,8 @@ function apiTeacherForget(device) {
   return { ok: true };
 }
 
-function isTeacher_(token) { return !!token && CacheService.getScriptCache().get('tsess:' + token) === '1'; }
+function isTeacher_(token) { if (!token) return false; const v = CacheService.getScriptCache().get('tsess:' + token); return v === '1' || v === 'demo'; }
+function isDemo_(token) { return !!token && CacheService.getScriptCache().get('tsess:' + token) === 'demo'; }
 
 function apiTeacherBoard(token) {
   if (!isTeacher_(token)) return expired_();
@@ -2960,7 +2972,7 @@ function apiGalleryList(token, taskId) {
   if (role === 'denied' || !task) return fail_('모아보기가 공개되지 않았습니다.');
   const teacher = role === 'teacher';
   const items = rows_(SHEET.SUBS, SUB_HEADERS.length).filter(function (r) {
-    return String(r[S.TASK]).trim() === task.id && String(r[S.THUMB] || '').trim();
+    return String(r[S.TASK]).trim() === task.id && String(r[S.THUMB] || '').trim() && (teacher || normId_(r[S.ID]) !== DEMO_STUDENT); // 체험 학생 제출물은 학생 모아보기에 안 나온다
   }).map(function (r) {
     const id = normId_(r[S.ID]);
     const name = String(r[S.NAME] || '').trim();
@@ -3105,6 +3117,7 @@ function lockMessage_(v) {
 }
 
 function registerFail_(s, message) {
+  if (normId_(s.v[C.ID]) === DEMO_STUDENT) return message + ' (체험 계정은 잠기지 않아요)'; // 여러 사람이 같이 쓰는 체험 학생
   const fails = Number(s.v[C.FAILS] || 0) + 1;
   if (fails >= MAX_FAILS) {
     const until = new Date(Date.now() + LOCK_MINUTES * 60000);
@@ -3246,6 +3259,7 @@ function autoSyncTick() {
   try { onceCleanup5_(); } catch (e) { try { diagRow_('정리 실패', e.message); } catch (x) {} }
   try { onceFixName6_(); } catch (e) { try { diagRow_('이름 고침 실패', e.message); } catch (x) {} }
   try { onceFieldScale7_(); } catch (e) { try { diagRow_('현장실습 배점 실패', e.message); } catch (x) {} }
+  try { onceDemo8_(); } catch (e) { try { diagRow_('체험 준비 실패', e.message); } catch (x) {} }
   try { onceCheckTask_(); } catch (e) { try { diagRow_('체크 과제 실패', e.message); } catch (x) {} }
   try { onceTasks_(); } catch (e) { syncLog_('정리 실패: ' + e.message); try { diagRow_('동아리 추가 실패', e.message); } catch (x) {} }
   try {
@@ -4097,4 +4111,48 @@ function onceFieldScale7_() {
   const done = [];
   rows.forEach(function (r, i) { const id = String(r[0]).trim(); if (set[id]) { sh.getRange(i + 2, 14).setValue(set[id]); done.push(String(r[2])); } });
   diagRow_('현장실습 배점', done.length ? done.join(' / ') + ' 에 넣음' : '대상 과제를 못 찾음');
+}
+
+
+/* ═════════════ 교사 연수 체험 ═════════════
+   - 체험 교사 코드로 들어오면 실제 화면 그대로 보되: 저장은 막고, 점수·메모·출결·신청서·전화번호·설문 응답은 가린다.
+   - 체험 학생(10799)은 여럿이 같이 써도 PIN 오류로 잠기지 않고, 그 제출물은 학생 모아보기에 안 나온다.
+   - 끄기: 스크립트 속성 DEMO_OFF=1 (또는 DEMO_UNTIL 시각이 지나면 자동으로 꺼짐) */
+const DEMO_STUDENT = '10799';
+const DEMO_READ = ['apiTeacherResume', 'apiTeacherForget', 'apiTeacherBoard', 'apiTeacherTask', 'apiTeacherDetail', 'apiTeacherSurveys', 'apiTeacherSurveyResult',
+  'apiTeacherMemes', 'apiTeacherAttendDay', 'apiTeacherAttendNeisList', 'apiTeacherAttendMonth', 'apiTeacherPosts', 'apiTeacherGrades', 'apiTeacherTrips', 'apiTeacherCh'];
+function demoCode_() { return PropertiesService.getScriptProperties().getProperty('DEMO_CODE') || '1113'; }
+function demoOn_() {
+  const p = PropertiesService.getScriptProperties();
+  const until = Number(p.getProperty('DEMO_UNTIL')) || 0;
+  return p.getProperty('DEMO_OFF') !== '1' && (!until || Date.now() < until);
+}
+function demoMask_(fn, r) {
+  if (!r || !r.ok) return r;
+  const blankGrade = function (g) { return { mark: '', points: null, gradedAt: '', memo: '', priv: '', confirmedAt: '', confirmedPoints: null }; };
+  if (fn === 'apiTeacherTask') r.students.forEach(function (s) { s.mark = ''; s.points = null; s.confirmed = false; s.hasMemo = false; s.stale = false; });
+  if (fn === 'apiTeacherDetail') { r.grade = blankGrade(); r.stale = false; r.pin = 'none'; }
+  if (fn === 'apiTeacherGrades') r.students.forEach(function (s) { Object.keys(s.cells || {}).forEach(function (k) { const c = s.cells[k]; c.mark = ''; c.points = null; c.confirmed = false; c.stale = false; }); });
+  if (fn === 'apiTeacherAttendDay') { r.students.forEach(function (s) { s.rec = null; }); r.pending = []; r.docsLeft = []; r.prevDoc = null; }
+  if (fn === 'apiTeacherAttendMonth') { r.students.forEach(function (s) { s.counts = null; }); r.pending = []; }
+  if (fn === 'apiTeacherAttendNeisList') r.items = [];
+  if (fn === 'apiTeacherTrips') r.trips = [];
+  if (fn === 'apiTeacherSurveyResult') { r.table = r.table && r.table.length ? [r.table[0]] : []; (r.questions || []).forEach(function (q) { (q.options || []).forEach(function (o) { o.count = 0; }); q.answered = 0; if (q.texts) q.texts = []; if (q.etcTexts) q.etcTexts = []; }); r.count = 0; r.missing = []; }
+  if (fn === 'apiTeacherCh') r.entries.forEach(function (e) { e.phone = '010-****-****'; });
+  r.demo = true;
+  return r;
+}
+/** 한 번만: 체험 학생 준비 (10799 체험학생, PIN 1234) */
+function onceDemo8_() {
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty('ONCE8_DONE') === 'v1') return;
+  props.setProperty('ONCE8_DONE', 'v1');
+  const s = findStudent_(DEMO_STUDENT);
+  if (!s) { diagRow_('체험 준비', DEMO_STUDENT + ' 학생이 없음'); return; }
+  const salt = Utilities.getUuid();
+  s.sh.getRange(s.row, C.NAME + 1).setValue('체험학생');
+  s.sh.getRange(s.row, C.HASH + 1, 1, 2).setValues([[hashPin_('1234', salt), salt]]);
+  s.sh.getRange(s.row, C.FAILS + 1, 1, 2).setValues([[0, '']]);
+  props.setProperty('DEMO_UNTIL', String(new Date('2026-11-14T00:00:00+09:00').getTime())); // 발표 날 자정에 체험 교사 코드 자동 종료
+  diagRow_('체험 준비', DEMO_STUDENT + ' 체험학생 PIN 1234, 교사 체험 코드 ' + demoCode_());
 }

@@ -1,10 +1,10 @@
 {
-  "version": "20261112.1611",
-  "note": "현장실습 학생 채점 기준",
+  "version": "20261113.1039",
+  "note": "교사 연수 체험: 체험 교사 코드·체험 학생·발표 화면",
   "files": [
     {
       "name": "Code.gs",
-      "sha256": "46cbfa54783f98ae24f977a4164baf164d3cf89dff1b06be841e83245fe4452d"
+      "sha256": "c296f9f8ea6deb87f0e18907e200308a8d85f0bb599a1a9ae0afb339dad01941"
     },
     {
       "name": "Demo.gs",
@@ -12,7 +12,7 @@
     },
     {
       "name": "Index.html",
-      "sha256": "b0f74e0c4f5ffa10498301cb3272ecff9578400a59f0f66922535aefc833666f"
+      "sha256": "d6a5b3423d8ace4b81d925187a58146925ee30a6db621e41f40a8ca8fe0dab78"
     },
     {
       "name": "Setup.html",
