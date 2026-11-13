@@ -3263,6 +3263,7 @@ function autoSyncTick() {
   try { onceFieldScale7_(); } catch (e) { try { diagRow_('현장실습 배점 실패', e.message); } catch (x) {} }
   try { onceDemo8_(); } catch (e) { try { diagRow_('체험 준비 실패', e.message); } catch (x) {} }
   try { onceDemo9_(); } catch (e) { try { diagRow_('체험 학생 실패', e.message); } catch (x) {} }
+  try { onceField10_(); } catch (e) { try { diagRow_('현장실습 총점 옮기기 실패', e.message); } catch (x) {} }
   try { onceCheckTask_(); } catch (e) { try { diagRow_('체크 과제 실패', e.message); } catch (x) {} }
   try { onceTasks_(); } catch (e) { syncLog_('정리 실패: ' + e.message); try { diagRow_('동아리 추가 실패', e.message); } catch (x) {} }
   try {
@@ -4238,4 +4239,25 @@ function apiTeacherFieldTotal(token, studentId, value) {
   st.sh.getRange(st.row, C.FIELD + 1).setValue(value);
   const done = applyField_(studentId, value);
   return { ok: true, total: value, applied: done };
+}
+
+/** 한 번만: 과제마다 넣어 둔 '현장 N' 점수를 학생 총점으로 옮기고, 그 학생의 다른 수업 과제에도 반영 */
+function onceField10_() {
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty('ONCE10_DONE') === 'v1') return;
+  props.setProperty('ONCE10_DONE', 'v1');
+  const found = {};
+  rows_(SHEET.GRADES, GRADE_HEADERS.length).forEach(function (r) {
+    const m = String(r[G.GRADE] || '').trim().match(/^현장 (미제출|\d+(\.\d+)?)$/);
+    if (m) found[normId_(r[G.ID])] = m[1];
+  });
+  const out = [];
+  Object.keys(found).forEach(function (sid) {
+    const st = findStudent_(sid);
+    if (!st || String(st.v[C.FIELD] == null ? '' : st.v[C.FIELD]).trim() !== '') return;
+    st.sh.getRange(st.row, C.FIELD + 1).setValue(found[sid]);
+    const done = applyField_(sid, found[sid]);
+    out.push(st.v[C.NAME] + ' ' + found[sid] + ' → ' + done.map(function (d) { return d.title + ' ' + d.points; }).join(', '));
+  });
+  diagRow_('현장실습 총점 옮기기', out.length ? out.join(' / ') : '옮길 것 없음');
 }
