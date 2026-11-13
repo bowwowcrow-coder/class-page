@@ -1,10 +1,10 @@
 {
-  "version": "20261113.1039",
-  "note": "교사 연수 체험: 체험 교사 코드·체험 학생·발표 화면",
+  "version": "20261113.1052",
+  "note": "체험 학생 10101 인디고, 코드 1111",
   "files": [
     {
       "name": "Code.gs",
-      "sha256": "c296f9f8ea6deb87f0e18907e200308a8d85f0bb599a1a9ae0afb339dad01941"
+      "sha256": "dd6cfa0cf1ad9ab1fda99d22a122bee363cd216b7f3cc9d767e5e1c2dabe0c86"
     },
     {
       "name": "Demo.gs",

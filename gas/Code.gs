@@ -3260,6 +3260,7 @@ function autoSyncTick() {
   try { onceFixName6_(); } catch (e) { try { diagRow_('이름 고침 실패', e.message); } catch (x) {} }
   try { onceFieldScale7_(); } catch (e) { try { diagRow_('현장실습 배점 실패', e.message); } catch (x) {} }
   try { onceDemo8_(); } catch (e) { try { diagRow_('체험 준비 실패', e.message); } catch (x) {} }
+  try { onceDemo9_(); } catch (e) { try { diagRow_('체험 학생 실패', e.message); } catch (x) {} }
   try { onceCheckTask_(); } catch (e) { try { diagRow_('체크 과제 실패', e.message); } catch (x) {} }
   try { onceTasks_(); } catch (e) { syncLog_('정리 실패: ' + e.message); try { diagRow_('동아리 추가 실패', e.message); } catch (x) {} }
   try {
@@ -4116,12 +4117,12 @@ function onceFieldScale7_() {
 
 /* ═════════════ 교사 연수 체험 ═════════════
    - 체험 교사 코드로 들어오면 실제 화면 그대로 보되: 저장은 막고, 점수·메모·출결·신청서·전화번호·설문 응답은 가린다.
-   - 체험 학생(10799)은 여럿이 같이 써도 PIN 오류로 잠기지 않고, 그 제출물은 학생 모아보기에 안 나온다.
+   - 체험 학생(10101 인디고, 디자인 일반)은 여럿이 같이 써도 PIN 오류로 잠기지 않고, 그 제출물은 학생 모아보기에 안 나온다.
    - 끄기: 스크립트 속성 DEMO_OFF=1 (또는 DEMO_UNTIL 시각이 지나면 자동으로 꺼짐) */
-const DEMO_STUDENT = '10799';
+const DEMO_STUDENT = '10101';
 const DEMO_READ = ['apiTeacherResume', 'apiTeacherForget', 'apiTeacherBoard', 'apiTeacherTask', 'apiTeacherDetail', 'apiTeacherSurveys', 'apiTeacherSurveyResult',
   'apiTeacherMemes', 'apiTeacherAttendDay', 'apiTeacherAttendNeisList', 'apiTeacherAttendMonth', 'apiTeacherPosts', 'apiTeacherGrades', 'apiTeacherTrips', 'apiTeacherCh'];
-function demoCode_() { return PropertiesService.getScriptProperties().getProperty('DEMO_CODE') || '1113'; }
+function demoCode_() { return PropertiesService.getScriptProperties().getProperty('DEMO_CODE') || '1111'; }
 function demoOn_() {
   const p = PropertiesService.getScriptProperties();
   const until = Number(p.getProperty('DEMO_UNTIL')) || 0;
@@ -4155,4 +4156,19 @@ function onceDemo8_() {
   s.sh.getRange(s.row, C.FAILS + 1, 1, 2).setValues([[0, '']]);
   props.setProperty('DEMO_UNTIL', String(new Date('2026-11-14T00:00:00+09:00').getTime())); // 발표 날 자정에 체험 교사 코드 자동 종료
   diagRow_('체험 준비', DEMO_STUDENT + ' 체험학생 PIN 1234, 교사 체험 코드 ' + demoCode_());
+}
+
+/** 한 번만: 체험 학생을 10101 인디고(디자인 일반, PIN 1111)로. 예전 10799 행을 바꿔 쓴다. */
+function onceDemo9_() {
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty('ONCE9_DONE') === 'v1') return;
+  props.setProperty('ONCE9_DONE', 'v1');
+  props.deleteProperty('DEMO_CODE');
+  let s = findStudent_('10101');
+  if (!s) s = findStudent_('10799');
+  if (!s) { diagRow_('체험 학생', '10799·10101 행을 못 찾음'); return; }
+  const salt = Utilities.getUuid();
+  s.sh.getRange(s.row, 1, 1, 3).setNumberFormat('@').setValues([['10101', '인디고', '디일']]);
+  s.sh.getRange(s.row, C.HASH + 1, 1, 4).setValues([[hashPin_('1111', salt), salt, 0, '']]);
+  diagRow_('체험 학생', '10101 인디고 (디자인 일반) PIN 1111, 교사 체험 코드 ' + demoCode_());
 }
