@@ -27,8 +27,8 @@
   .kv dt { color: var(--sub); }
   .kv dd { margin: 0; font-size: clamp(18px, 3vh, 30px); font-weight: 800; letter-spacing: .02em; }
   .note { margin: 0; font-size: clamp(11px, 1.35vh, 13px); color: var(--sub); line-height: 1.45; }
-  .stage { position: relative; background: #fff; }
-  .stage iframe { width: 100%; height: 100%; border: 0; display: block; }
+  .stage { position: relative; background: #fff; overflow: hidden; }
+  .stage iframe { position: absolute; left: 0; top: 0; width: 100%; height: 100%; border: 0; display: block; transform-origin: 0 0; }
   .tools { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: rgba(0,0,0,.55); opacity: .45; transition: opacity .2s; }
   .tools:hover { opacity: 1; }
   .tools button { min-width: 30px; height: 28px; padding: 0 10px; border: 0; border-radius: 999px; background: none; color: #fff; font: inherit; font-size: 13px; cursor: pointer; }
@@ -88,10 +88,13 @@
   try { z = Number(localStorage.getItem('show_zoom')) || 1; } catch (e) {}
   function apply() {
     document.getElementById('zval').textContent = Math.round(z * 100) + '%';
+    // 수업 화면 자체를 크게 그리지 않고, 칸을 1/z 크기로 만든 뒤 z배로 키운다 → 브라우저 확대처럼 화면 폭에 맞게 다시 배치되어 옆으로 밀려나는 부분이 없다
+    var w = (100 / z) + '%';
+    if (app.style.width !== w) { app.style.width = w; app.style.height = w; app.style.transform = 'scale(' + z + ')'; }
     try {
       var d = app.contentDocument;
       if (!d || !d.documentElement) return;
-      if (d.documentElement.style.zoom !== String(z)) d.documentElement.style.zoom = z;
+      if (d.documentElement.style.zoom) d.documentElement.style.zoom = '';
       if (!d.__zoomHooked) { d.__zoomHooked = true; hook(d); hook(app.contentWindow); }
     } catch (e) {}
   }
